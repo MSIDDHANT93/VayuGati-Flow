@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 from typing import Optional
 from datetime import datetime
+from app.utils.fields import auto_timestamp_field, entity_id_field
 
 
 class IntersectionType(str, Enum):
@@ -25,7 +26,7 @@ class IntersectionStatus(str, Enum):
 class Intersection(BaseModel):
     """Domain model representing a traffic intersection."""
     
-    intersection_id: str = Field(..., description="Unique identifier for the intersection", min_length=1, max_length=50)
+    intersection_id: str = entity_id_field("Unique identifier for the intersection")
     name: str = Field(..., description="Human-readable name of the intersection", min_length=1, max_length=200)
     location_lat: float = Field(..., description="Latitude coordinate", ge=-90, le=90)
     location_lon: float = Field(..., description="Longitude coordinate", ge=-180, le=180)
@@ -34,8 +35,8 @@ class Intersection(BaseModel):
     num_lanes: int = Field(..., description="Number of lanes at the intersection", ge=1, le=12)
     has_traffic_signal: bool = Field(default=False, description="Whether the intersection has traffic signals")
     municipality: str = Field(..., description="Municipality or city where intersection is located", min_length=1, max_length=100)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(), description="Timestamp when intersection was created")
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(), description="Timestamp when intersection was last updated")
+    created_at: datetime = auto_timestamp_field("Timestamp when intersection was created")
+    updated_at: datetime = auto_timestamp_field("Timestamp when intersection was last updated")
     
     model_config = ConfigDict(
         json_schema_extra={

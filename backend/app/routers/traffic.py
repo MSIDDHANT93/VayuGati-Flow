@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from typing import Annotated
 
 from app.schemas.traffic_analysis import TrafficAnalysisRequest, TrafficAnalysisResult
 from app.schemas.common import APIResponse
 from app.services.traffic_analysis_service import TrafficAnalysisService
+from app.utils.responses import execute_service
 
 
 router = APIRouter(prefix="/traffic", tags=["traffic"])
@@ -36,12 +37,4 @@ async def analyze_traffic(
     All calculations use deterministic algorithms based on Highway Capacity Manual.
     No AI, no ML, no LLM - pure mathematical calculations.
     """
-    try:
-        result = service.analyze(request)
-        return APIResponse[TrafficAnalysisResult](
-            success=True,
-            data=result,
-            errors=None
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Traffic analysis failed: {str(e)}")
+    return execute_service(lambda: service.analyze(request), "Traffic analysis failed")

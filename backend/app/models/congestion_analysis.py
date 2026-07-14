@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 from typing import Optional, List
 from datetime import datetime
+from app.utils.fields import auto_timestamp_field, entity_id_field
 
 
 class CongestionLevel(str, Enum):
@@ -29,14 +30,14 @@ class CongestionCause(str, Enum):
 class CongestionAnalysis(BaseModel):
     """Domain model representing a congestion analysis for an intersection."""
     
-    analysis_id: str = Field(..., description="Unique identifier for the analysis", min_length=1, max_length=50)
-    intersection_id: str = Field(..., description="ID of the intersection analyzed", min_length=1, max_length=50)
-    metrics_id: str = Field(..., description="ID of the traffic metrics used for analysis", min_length=1, max_length=50)
+    analysis_id: str = entity_id_field("Unique identifier for the analysis")
+    intersection_id: str = entity_id_field("ID of the intersection analyzed")
+    metrics_id: str = entity_id_field("ID of the traffic metrics used for analysis")
     
     # Analysis window
     analysis_window_start: datetime = Field(..., description="Start of analysis time window")
     analysis_window_end: datetime = Field(..., description="End of analysis time window")
-    analysis_timestamp: datetime = Field(default_factory=lambda: datetime.now(), description="Timestamp when analysis was performed")
+    analysis_timestamp: datetime = auto_timestamp_field("Timestamp when analysis was performed")
     
     # Congestion assessment
     congestion_level: CongestionLevel = Field(..., description="Current congestion level")
@@ -71,7 +72,7 @@ class CongestionAnalysis(BaseModel):
     analysis_confidence: float = Field(default=1.0, description="Overall confidence in analysis (0-1)", ge=0, le=1)
     
     # Metadata
-    created_at: datetime = Field(default_factory=lambda: datetime.now(), description="Timestamp when analysis was created")
+    created_at: datetime = auto_timestamp_field("Timestamp when analysis was created")
     
     model_config = ConfigDict(
         json_schema_extra={

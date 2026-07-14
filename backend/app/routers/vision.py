@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from typing import Annotated
 
 from app.schemas.vision import VisionAnalysisRequest, VisionAnalysisResponse
 from app.schemas.common import APIResponse
 from app.services.computer_vision_service import ComputerVisionService
+from app.utils.responses import execute_service
 
 
 router = APIRouter(prefix="/vision", tags=["vision"])
@@ -30,12 +31,4 @@ async def analyze_image(
     
     If YOLO is not available, the service returns mock detections for testing.
     """
-    try:
-        result = service.analyze_image(request)
-        return APIResponse[VisionAnalysisResponse](
-            success=True,
-            data=result,
-            errors=None
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Computer vision analysis failed: {str(e)}")
+    return execute_service(lambda: service.analyze_image(request), "Computer vision analysis failed")

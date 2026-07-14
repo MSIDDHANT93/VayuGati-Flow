@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 from typing import Optional
 from datetime import datetime
+from app.utils.fields import auto_timestamp_field, entity_id_field
 
 
 class VehicleType(str, Enum):
@@ -25,10 +26,10 @@ class DetectionConfidence(str, Enum):
 class VehicleDetection(BaseModel):
     """Domain model representing a vehicle detection in a frame."""
     
-    detection_id: str = Field(..., description="Unique identifier for the detection", min_length=1, max_length=50)
-    frame_id: str = Field(..., description="ID of the frame where vehicle was detected", min_length=1, max_length=50)
-    camera_id: str = Field(..., description="ID of the camera that captured the frame", min_length=1, max_length=50)
-    intersection_id: str = Field(..., description="ID of the intersection being monitored", min_length=1, max_length=50)
+    detection_id: str = entity_id_field("Unique identifier for the detection")
+    frame_id: str = entity_id_field("ID of the frame where vehicle was detected")
+    camera_id: str = entity_id_field("ID of the camera that captured the frame")
+    intersection_id: str = entity_id_field("ID of the intersection being monitored")
     vehicle_type: VehicleType = Field(..., description="Type of vehicle detected")
     confidence: float = Field(..., description="Detection confidence score (0-1)", ge=0, le=1)
     confidence_level: DetectionConfidence = Field(..., description="Confidence level category")
@@ -51,7 +52,7 @@ class VehicleDetection(BaseModel):
     
     # Metadata
     detection_timestamp: datetime = Field(..., description="Timestamp when detection was made")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(), description="Timestamp when detection record was created")
+    created_at: datetime = auto_timestamp_field("Timestamp when detection record was created")
     
     model_config = ConfigDict(
         json_schema_extra={
