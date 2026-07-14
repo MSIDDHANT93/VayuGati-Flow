@@ -19,6 +19,7 @@ except ImportError:
 
 from app.schemas.vision import VisionAnalysisRequest, VisionAnalysisResponse
 from app.models.vehicle_detection import VehicleDetection, VehicleType, DetectionConfidence
+from app.utils.logger import logger
 
 
 class ComputerVisionService:
@@ -37,9 +38,12 @@ class ComputerVisionService:
         if YOLO_AVAILABLE:
             try:
                 self.model = YOLO(model_path)
-            except Exception as e:
-                print(f"Warning: Failed to load YOLO model: {e}")
-                print("Computer vision service will use mock detections.")
+            except Exception:
+                logger.warning(
+                    "Failed to load YOLO model from '%s'; falling back to mock detections.",
+                    model_path,
+                    exc_info=True,
+                )
     
     def analyze_image(self, request: VisionAnalysisRequest) -> VisionAnalysisResponse:
         """
@@ -102,8 +106,12 @@ class ComputerVisionService:
             
             return vehicle_detections
             
-        except Exception as e:
-            print(f"YOLO inference failed: {e}")
+        except Exception:
+            logger.error(
+                "YOLO inference failed for frame '%s'; falling back to mock detections.",
+                request.frame_id,
+                exc_info=True,
+            )
             return self._generate_mock_detections(request)
     
     def _convert_yolo_box_to_detection(

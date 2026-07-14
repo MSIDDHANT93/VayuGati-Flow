@@ -31,4 +31,9 @@ async def analyze_image(
     
     If YOLO is not available, the service returns mock detections for testing.
     """
-    return execute_service(lambda: service.analyze_image(request), "Computer vision analysis failed")
+    return execute_service(
+        lambda: service.analyze_image(request),
+        "Computer vision analysis failed",
+        "Computer vision analysis failed for frame '%s'",
+        request.frame_id,
+    )

@@ -37,4 +37,9 @@ async def analyze_traffic(
     All calculations use deterministic algorithms based on Highway Capacity Manual.
     No AI, no ML, no LLM - pure mathematical calculations.
     """
-    return execute_service(lambda: service.analyze(request), "Traffic analysis failed")
+    return execute_service(
+        lambda: service.analyze(request),
+        "Traffic analysis failed",
+        "Traffic analysis failed for intersection '%s'",
+        request.intersection.intersection_id,
+    )

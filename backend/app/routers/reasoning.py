@@ -35,4 +35,9 @@ async def analyze_reasoning(
     
     If Fireworks AI is not available, the service returns mock responses based on congestion score.
     """
-    return execute_service(lambda: service.analyze_traffic(request), "AI reasoning failed")
+    return execute_service(
+        lambda: service.analyze_traffic(request),
+        "AI reasoning failed",
+        "AI reasoning failed for intersection '%s'",
+        request.intersection_id,
+    )
