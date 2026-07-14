@@ -64,8 +64,8 @@ class ComputerVisionService:
         """
         start_time = time.time()
         
-        if self.model is None or not YOLO_AVAILABLE:
-            # Use mock detections if YOLO is not available
+        if self.model is None or not YOLO_AVAILABLE or not PIL_AVAILABLE:
+            # Use mock detections if YOLO or PIL (image decoding) is not available
             vehicle_detections = self._generate_mock_detections(request)
         else:
             # Run YOLO inference
