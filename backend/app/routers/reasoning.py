@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from functools import lru_cache
 from typing import Annotated
 
 from app.schemas.reasoning import ReasoningRequest, ReasoningResponse
@@ -9,8 +10,12 @@ from app.services.reasoning_service import ReasoningService
 router = APIRouter(prefix="/reasoning", tags=["reasoning"])
 
 
+@lru_cache
 def get_reasoning_service() -> ReasoningService:
-    """Dependency injection for reasoning service."""
+    """Dependency injection for reasoning service.
+
+    Cached so the Fireworks client is initialized once and reused across requests.
+    """
     return ReasoningService()
 
 

@@ -18,6 +18,7 @@ except ImportError:
 
 from app.schemas.reasoning import ReasoningRequest, ReasoningResponse
 from app.config import get_settings
+from app.utils.logger import logger
 
 
 class ReasoningService:
@@ -37,8 +38,11 @@ class ReasoningService:
                     base_url="https://api.fireworks.ai/inference/v1"
                 )
             except Exception as e:
-                print(f"Warning: Failed to initialize Fireworks client: {e}")
-                print("Reasoning service will use mock responses.")
+                logger.warning(
+                    "Failed to initialize Fireworks client: %s. "
+                    "Reasoning service will use mock responses.",
+                    e,
+                )
     
     def analyze_traffic(self, request: ReasoningRequest) -> ReasoningResponse:
         """
@@ -88,7 +92,7 @@ class ReasoningService:
             )
             
         except Exception as e:
-            print(f"Fireworks AI call failed: {e}")
+            logger.error("Fireworks AI call failed: %s", e)
             return self._generate_mock_response(request)
     
     def _build_prompt(self, request: ReasoningRequest) -> str:
@@ -163,7 +167,7 @@ No markdown, no additional text outside JSON."""
             }
             
         except Exception as e:
-            print(f"Failed to parse Fireworks response: {e}")
+            logger.error("Failed to parse Fireworks response: %s", e)
             return self._get_default_insights()
     
     def _generate_mock_response(self, request: ReasoningRequest) -> ReasoningResponse:

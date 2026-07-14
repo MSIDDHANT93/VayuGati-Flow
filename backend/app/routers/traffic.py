@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from functools import lru_cache
 from typing import Annotated
 
 from app.schemas.traffic_analysis import TrafficAnalysisRequest, TrafficAnalysisResult
@@ -9,8 +10,12 @@ from app.services.traffic_analysis_service import TrafficAnalysisService
 router = APIRouter(prefix="/traffic", tags=["traffic"])
 
 
+@lru_cache
 def get_traffic_service() -> TrafficAnalysisService:
-    """Dependency injection for traffic analysis service."""
+    """Dependency injection for traffic analysis service.
+
+    Cached so a single stateless service instance is reused across requests.
+    """
     return TrafficAnalysisService()
 
 

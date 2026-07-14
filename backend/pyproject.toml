@@ -1,0 +1,5 @@
+[project]
+name = "vayugati-flow-backend"
+version = "0.1.0"
+description = "FastAPI backend for VayuGati Flow"
+requires-python = ">=3.11"

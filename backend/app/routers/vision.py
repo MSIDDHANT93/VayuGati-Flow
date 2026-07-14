@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from functools import lru_cache
 from typing import Annotated
 
 from app.schemas.vision import VisionAnalysisRequest, VisionAnalysisResponse
@@ -9,8 +10,12 @@ from app.services.computer_vision_service import ComputerVisionService
 router = APIRouter(prefix="/vision", tags=["vision"])
 
 
+@lru_cache
 def get_vision_service() -> ComputerVisionService:
-    """Dependency injection for computer vision service."""
+    """Dependency injection for computer vision service.
+
+    Cached so the YOLO model is loaded once and reused across requests.
+    """
     return ComputerVisionService()
 
 
