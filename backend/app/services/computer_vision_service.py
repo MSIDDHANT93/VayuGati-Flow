@@ -86,8 +86,8 @@ class ComputerVisionService:
             List of VehicleDetection objects
         """
         try:
-            # Decode base64 image
-            image_bytes = base64.b64decode(request.image_data)
+            # Decode base64 image (validate=True rejects malformed input)
+            image_bytes = base64.b64decode(request.image_data, validate=True)
             image = io.BytesIO(image_bytes)
             
             # Run YOLO inference

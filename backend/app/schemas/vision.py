@@ -10,7 +10,11 @@ class VisionAnalysisRequest(BaseModel):
     camera_id: str = Field(..., description="Camera identifier")
     intersection_id: str = Field(..., description="Intersection identifier")
     frame_id: str = Field(..., description="Frame identifier")
-    image_data: str = Field(..., description="Base64 encoded image data")
+    image_data: str = Field(
+        ...,
+        description="Base64 encoded image data",
+        max_length=15_000_000,
+    )
     image_format: str = Field(default="jpg", description="Image format (jpg, png, etc.)")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(), description="Image capture timestamp")
     
