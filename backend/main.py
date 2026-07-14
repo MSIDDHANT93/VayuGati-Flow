@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.config import get_settings
-from app.routers import traffic
+from app.routers import traffic, vision, reasoning
 
 settings = get_settings()
 
@@ -13,6 +13,8 @@ app = FastAPI(
 
 # Include routers
 app.include_router(traffic.router, prefix=settings.api_prefix)
+app.include_router(vision.router, prefix=settings.api_prefix)
+app.include_router(reasoning.router, prefix=settings.api_prefix)
 
 
 @app.get("/")
