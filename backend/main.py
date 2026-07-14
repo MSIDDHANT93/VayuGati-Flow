@@ -1,14 +1,24 @@
 from fastapi import FastAPI
+from app.config import get_settings
+from app.routers import traffic
+
+settings = get_settings()
 
 app = FastAPI(
-    title="VayuGati Flow API",
+    title=settings.app_name,
     description="AI-Powered Traffic Root Cause Analysis and Decision Support System",
-    version="0.1.0"
+    version=settings.app_version,
+    debug=settings.debug
 )
+
+# Include routers
+app.include_router(traffic.router, prefix=settings.api_prefix)
 
 
 @app.get("/")
 def root():
     return {
-        "message": "Welcome to VayuGati Flow 🚦"
+        "message": "Welcome to VayuGati Flow 🚦",
+        "version": settings.app_version,
+        "api_prefix": settings.api_prefix
     }
