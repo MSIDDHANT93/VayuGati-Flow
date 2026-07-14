@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 from typing import List, Optional
 from datetime import datetime
+from app.utils.fields import auto_timestamp_field
 from app.models.intersection import Intersection
 from app.models.camera import Camera
 from app.models.vehicle_detection import VehicleDetection
@@ -121,7 +122,7 @@ class TrafficAnalysisResult(BaseModel):
     risk_factors: List[str] = Field(default_factory=list, description="List of identified risk factors")
     
     # Metadata
-    analysis_timestamp: datetime = Field(default_factory=lambda: datetime.now(), description="When analysis was performed")
+    analysis_timestamp: datetime = auto_timestamp_field("When analysis was performed")
     total_vehicles_analyzed: int = Field(..., description="Number of vehicles in analysis", ge=0)
     
     model_config = ConfigDict(

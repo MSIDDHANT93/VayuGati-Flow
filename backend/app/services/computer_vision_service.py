@@ -44,12 +44,11 @@ class ComputerVisionService:
         if YOLO_AVAILABLE:
             try:
                 self.model = YOLO(model_path)
-            except Exception as e:
+            except Exception:
                 logger.warning(
-                    "Failed to load YOLO model (%s): %s. "
-                    "Computer vision service will use mock detections.",
+                    "Failed to load YOLO model from '%s'; falling back to mock detections.",
                     model_path,
-                    e,
+                    exc_info=True,
                 )
     
     def analyze_image(self, request: VisionAnalysisRequest) -> VisionAnalysisResponse:
@@ -118,23 +117,29 @@ class ComputerVisionService:
             
             return vehicle_detections
             
-        except Exception as e:
-            logger.error("YOLO inference failed: %s", e)
+        except Exception:
+            logger.error(
+                "YOLO inference failed for frame '%s'; falling back to mock detections.",
+                request.frame_id,
+                exc_info=True,
+            )
             return self._generate_mock_detections(request)
     
     def _decode_image(self, image_data: str) -> "Image.Image":
         """
         Decode a base64-encoded image string into a PIL image.
-        
+
         Args:
             image_data: Base64 encoded image data
-            
+
         Returns:
             Decoded PIL image in RGB mode
         """
-        image_bytes = base64.b64decode(image_data)
+        image_bytes = base64.b64decode(
+            "".join(image_data.split()), validate=True
+        )
         return Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    
+
     def _convert_yolo_box_to_detection(
         self, 
         box, 
