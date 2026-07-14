@@ -4,11 +4,42 @@ Tests for Computer Vision Service.
 Tests verify YOLO integration and conversion to VehicleDetection models.
 """
 
+import base64
+import io
+import types
+
 import pytest
 from datetime import datetime, UTC
+from PIL import Image as PILImage
 from app.schemas.vision import VisionAnalysisRequest
 from app.services.computer_vision_service import ComputerVisionService
 from app.models.vehicle_detection import VehicleType, DetectionConfidence
+
+
+class _FakeXYXY:
+    """Minimal stand-in for a YOLO xyxy tensor row."""
+
+    def __init__(self, values):
+        self._values = values
+
+    def tolist(self):
+        return self._values
+
+
+class _FakeBox:
+    """Minimal stand-in for an Ultralytics detection box."""
+
+    def __init__(self, class_id, confidence, xyxy, orig_shape):
+        self.cls = [class_id]
+        self.conf = [confidence]
+        self.xyxy = [_FakeXYXY(xyxy)]
+        self.orig_shape = orig_shape
+
+
+def _encode_test_image(size=(8, 8), color=(255, 0, 0), fmt="PNG") -> str:
+    buffer = io.BytesIO()
+    PILImage.new("RGB", size, color).save(buffer, format=fmt)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
 class TestComputerVisionService:
@@ -160,3 +191,72 @@ class TestComputerVisionService:
             
             response = service.analyze_image(request)
             assert response.total_detections >= 0
+
+
+class TestYOLOInferenceConversion:
+    """Regression tests for YOLO inference and detection conversion."""
+
+    def test_yolo_detections_have_unique_ids(self, monkeypatch):
+        """Regression: each detection in a frame gets a unique detection_id."""
+        service = ComputerVisionService()
+
+        # Two car detections (YOLO class 2) in the same frame.
+        boxes = [
+            _FakeBox(2, 0.95, [10.0, 10.0, 50.0, 50.0], (100, 200)),
+            _FakeBox(2, 0.80, [60.0, 60.0, 90.0, 90.0], (100, 200)),
+        ]
+        fake_result = types.SimpleNamespace(boxes=boxes)
+
+        monkeypatch.setattr(service, "_decode_image", lambda image_data: "decoded-image")
+        service.model = lambda image, verbose=False: [fake_result]
+
+        request = VisionAnalysisRequest(
+            camera_id="CAM-001",
+            intersection_id="INT-001",
+            frame_id="FRM-001",
+            image_data="ignored-because-decode-is-mocked",
+        )
+
+        detections = service._run_yolo_inference(request)
+
+        assert len(detections) == 2
+        ids = [d.detection_id for d in detections]
+        assert len(set(ids)) == 2
+        assert ids == ["DET-FRM-001-000", "DET-FRM-001-001"]
+
+    def test_decode_image_returns_pil_image(self):
+        """Regression: base64 image data is decoded into a PIL image for YOLO."""
+        service = ComputerVisionService()
+        image_data = _encode_test_image(size=(12, 8))
+
+        image = service._decode_image(image_data)
+
+        assert isinstance(image, PILImage.Image)
+        assert image.size == (12, 8)
+        assert image.mode == "RGB"
+
+    def test_run_yolo_inference_decodes_real_image(self, monkeypatch):
+        """Regression: inference path decodes a real image before calling the model."""
+        service = ComputerVisionService()
+        image_data = _encode_test_image(size=(16, 16))
+
+        received = {}
+
+        def fake_model(image, verbose=False):
+            received["image"] = image
+            return [types.SimpleNamespace(boxes=[])]
+
+        service.model = fake_model
+
+        request = VisionAnalysisRequest(
+            camera_id="CAM-001",
+            intersection_id="INT-001",
+            frame_id="FRM-001",
+            image_data=image_data,
+        )
+
+        detections = service._run_yolo_inference(request)
+
+        assert detections == []
+        assert isinstance(received["image"], PILImage.Image)
+        assert received["image"].size == (16, 16)
