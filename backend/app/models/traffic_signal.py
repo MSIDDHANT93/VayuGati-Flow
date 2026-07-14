@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 from typing import Optional
 from datetime import datetime
+from app.utils.fields import auto_timestamp_field, entity_id_field
 
 
 class SignalPhase(str, Enum):
@@ -26,8 +27,8 @@ class SignalDirection(str, Enum):
 class TrafficSignal(BaseModel):
     """Domain model representing a traffic signal state."""
     
-    signal_id: str = Field(..., description="Unique identifier for the traffic signal", min_length=1, max_length=50)
-    intersection_id: str = Field(..., description="ID of the intersection where signal is located", min_length=1, max_length=50)
+    signal_id: str = entity_id_field("Unique identifier for the traffic signal")
+    intersection_id: str = entity_id_field("ID of the intersection where signal is located")
     direction: SignalDirection = Field(..., description="Direction this signal controls")
     current_phase: SignalPhase = Field(..., description="Current signal phase")
     
@@ -48,8 +49,8 @@ class TrafficSignal(BaseModel):
     override_source: Optional[str] = Field(None, description="Source of override if active", max_length=100)
     
     # Metadata
-    last_updated: datetime = Field(default_factory=lambda: datetime.now(), description="Timestamp when signal state was last updated")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(), description="Timestamp when signal was created")
+    last_updated: datetime = auto_timestamp_field("Timestamp when signal state was last updated")
+    created_at: datetime = auto_timestamp_field("Timestamp when signal was created")
     
     model_config = ConfigDict(
         json_schema_extra={

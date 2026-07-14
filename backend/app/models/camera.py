@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 from typing import Optional
 from datetime import datetime
+from app.utils.fields import auto_timestamp_field, entity_id_field
 
 
 class CameraStatus(str, Enum):
@@ -22,8 +23,8 @@ class CameraResolution(str, Enum):
 class Camera(BaseModel):
     """Domain model representing a traffic camera."""
     
-    camera_id: str = Field(..., description="Unique identifier for the camera", min_length=1, max_length=50)
-    intersection_id: str = Field(..., description="ID of the intersection this camera monitors", min_length=1, max_length=50)
+    camera_id: str = entity_id_field("Unique identifier for the camera")
+    intersection_id: str = entity_id_field("ID of the intersection this camera monitors")
     name: str = Field(..., description="Human-readable name of the camera", min_length=1, max_length=200)
     location_lat: float = Field(..., description="Latitude coordinate of camera position", ge=-90, le=90)
     location_lon: float = Field(..., description="Longitude coordinate of camera position", ge=-180, le=180)
@@ -39,8 +40,8 @@ class Camera(BaseModel):
     model: Optional[str] = Field(None, description="Camera model", max_length=100)
     installation_date: Optional[datetime] = Field(None, description="Date when camera was installed")
     last_maintenance: Optional[datetime] = Field(None, description="Date of last maintenance")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(), description="Timestamp when camera was created")
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(), description="Timestamp when camera was last updated")
+    created_at: datetime = auto_timestamp_field("Timestamp when camera was created")
+    updated_at: datetime = auto_timestamp_field("Timestamp when camera was last updated")
     
     model_config = ConfigDict(
         json_schema_extra={

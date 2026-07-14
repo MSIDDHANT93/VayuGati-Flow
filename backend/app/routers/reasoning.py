@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from typing import Annotated
 
 from app.schemas.reasoning import ReasoningRequest, ReasoningResponse
 from app.schemas.common import APIResponse
 from app.services.reasoning_service import ReasoningService
-from app.utils.logger import logger
+from app.utils.responses import execute_service
 
 
 router = APIRouter(prefix="/reasoning", tags=["reasoning"])
@@ -35,18 +35,9 @@ async def analyze_reasoning(
     
     If Fireworks AI is not available, the service returns mock responses based on congestion score.
     """
-    try:
-        result = service.analyze_traffic(request)
-        return APIResponse[ReasoningResponse](
-            success=True,
-            data=result,
-            errors=None
-        )
-    except HTTPException:
-        raise
-    except Exception:
-        logger.exception(
-            "AI reasoning failed for intersection '%s'",
-            request.intersection_id,
-        )
-        raise HTTPException(status_code=500, detail="AI reasoning failed")
+    return execute_service(
+        lambda: service.analyze_traffic(request),
+        "AI reasoning failed",
+        "AI reasoning failed for intersection '%s'",
+        request.intersection_id,
+    )
