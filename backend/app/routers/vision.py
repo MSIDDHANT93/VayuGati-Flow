@@ -4,6 +4,7 @@ from typing import Annotated
 from app.schemas.vision import VisionAnalysisRequest, VisionAnalysisResponse
 from app.schemas.common import APIResponse
 from app.services.computer_vision_service import ComputerVisionService
+from app.utils.logger import logger
 
 
 router = APIRouter(prefix="/vision", tags=["vision"])
@@ -37,5 +38,11 @@ async def analyze_image(
             data=result,
             errors=None
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Computer vision analysis failed: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception(
+            "Computer vision analysis failed for frame '%s'",
+            request.frame_id,
+        )
+        raise HTTPException(status_code=500, detail="Computer vision analysis failed")

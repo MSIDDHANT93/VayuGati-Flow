@@ -18,6 +18,7 @@ except ImportError:
 
 from app.schemas.reasoning import ReasoningRequest, ReasoningResponse
 from app.config import get_settings
+from app.utils.logger import logger
 
 
 class ReasoningService:
@@ -36,9 +37,11 @@ class ReasoningService:
                     api_key=self.api_key,
                     base_url="https://api.fireworks.ai/inference/v1"
                 )
-            except Exception as e:
-                print(f"Warning: Failed to initialize Fireworks client: {e}")
-                print("Reasoning service will use mock responses.")
+            except Exception:
+                logger.warning(
+                    "Failed to initialize Fireworks client; falling back to mock responses.",
+                    exc_info=True,
+                )
     
     def analyze_traffic(self, request: ReasoningRequest) -> ReasoningResponse:
         """
@@ -87,8 +90,12 @@ class ReasoningService:
                 model_used=self.model
             )
             
-        except Exception as e:
-            print(f"Fireworks AI call failed: {e}")
+        except Exception:
+            logger.error(
+                "Fireworks AI call failed for intersection '%s'; falling back to mock response.",
+                request.intersection_id,
+                exc_info=True,
+            )
             return self._generate_mock_response(request)
     
     def _build_prompt(self, request: ReasoningRequest) -> str:
@@ -162,8 +169,11 @@ No markdown, no additional text outside JSON."""
                 "confidence_score": float(insights.get("confidence_score", 0.5))
             }
             
-        except Exception as e:
-            print(f"Failed to parse Fireworks response: {e}")
+        except (json.JSONDecodeError, TypeError, ValueError):
+            logger.warning(
+                "Failed to parse Fireworks response as valid JSON; returning default insights.",
+                exc_info=True,
+            )
             return self._get_default_insights()
     
     def _generate_mock_response(self, request: ReasoningRequest) -> ReasoningResponse:
