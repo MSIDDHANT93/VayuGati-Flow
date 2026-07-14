@@ -4,6 +4,7 @@ from typing import Annotated
 from app.schemas.reasoning import ReasoningRequest, ReasoningResponse
 from app.schemas.common import APIResponse
 from app.services.reasoning_service import ReasoningService
+from app.utils.logger import logger
 
 
 router = APIRouter(prefix="/reasoning", tags=["reasoning"])
@@ -41,5 +42,11 @@ async def analyze_reasoning(
             data=result,
             errors=None
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI reasoning failed: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception(
+            "AI reasoning failed for intersection '%s'",
+            request.intersection_id,
+        )
+        raise HTTPException(status_code=500, detail="AI reasoning failed")

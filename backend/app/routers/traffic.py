@@ -4,6 +4,7 @@ from typing import Annotated
 from app.schemas.traffic_analysis import TrafficAnalysisRequest, TrafficAnalysisResult
 from app.schemas.common import APIResponse
 from app.services.traffic_analysis_service import TrafficAnalysisService
+from app.utils.logger import logger
 
 
 router = APIRouter(prefix="/traffic", tags=["traffic"])
@@ -43,5 +44,11 @@ async def analyze_traffic(
             data=result,
             errors=None
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Traffic analysis failed: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception(
+            "Traffic analysis failed for intersection '%s'",
+            request.intersection.intersection_id,
+        )
+        raise HTTPException(status_code=500, detail="Traffic analysis failed")
