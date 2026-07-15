@@ -91,7 +91,7 @@ def calculate_average_speed(vehicle_detections: List[VehicleDetection]) -> float
     Calculate average speed of all vehicles.
     
     Algorithm:
-    1. Filter vehicles with valid speed data
+    1. Filter vehicles with valid speed data (including stopped vehicles at 0 km/h)
     2. Calculate arithmetic mean
     
     Formula: avg_speed = sum(speeds) / count
@@ -107,7 +107,7 @@ def calculate_average_speed(vehicle_detections: List[VehicleDetection]) -> float
     
     valid_speeds = [
         v.speed_kmh for v in vehicle_detections 
-        if v.speed_kmh is not None and v.speed_kmh > 0
+        if v.speed_kmh is not None
     ]
     
     if not valid_speeds:

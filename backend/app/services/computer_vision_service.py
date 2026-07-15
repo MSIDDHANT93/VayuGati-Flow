@@ -17,8 +17,15 @@ try:
 except ImportError:
     YOLO_AVAILABLE = False
 
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+
 from app.schemas.vision import VisionAnalysisRequest, VisionAnalysisResponse
 from app.models.vehicle_detection import VehicleDetection, VehicleType, DetectionConfidence
+from app.utils.logger import logger
 
 
 class ComputerVisionService:
@@ -37,9 +44,12 @@ class ComputerVisionService:
         if YOLO_AVAILABLE:
             try:
                 self.model = YOLO(model_path)
-            except Exception as e:
-                print(f"Warning: Failed to load YOLO model: {e}")
-                print("Computer vision service will use mock detections.")
+            except Exception:
+                logger.warning(
+                    "Failed to load YOLO model from '%s'; falling back to mock detections.",
+                    model_path,
+                    exc_info=True,
+                )
     
     def analyze_image(self, request: VisionAnalysisRequest) -> VisionAnalysisResponse:
         """
@@ -53,8 +63,8 @@ class ComputerVisionService:
         """
         start_time = time.time()
         
-        if self.model is None or not YOLO_AVAILABLE:
-            # Use mock detections if YOLO is not available
+        if self.model is None or not YOLO_AVAILABLE or not PIL_AVAILABLE:
+            # Use mock detections if YOLO or PIL (image decoding) is not available
             vehicle_detections = self._generate_mock_detections(request)
         else:
             # Run YOLO inference
@@ -82,36 +92,61 @@ class ComputerVisionService:
             List of VehicleDetection objects
         """
         try:
-            # Decode base64 image
-            image_bytes = base64.b64decode(request.image_data)
-            image = io.BytesIO(image_bytes)
+            # Decode base64 image into a PIL image for Ultralytics YOLO
+            image = self._decode_image(request.image_data)
             
             # Run YOLO inference
             results = self.model(image, verbose=False)
             
             # Convert YOLO detections to VehicleDetection models
             vehicle_detections = []
+            detection_index = 0
             
             for result in results:
                 for box in result.boxes:
                     detection = self._convert_yolo_box_to_detection(
-                        box, request.camera_id, request.intersection_id, request.frame_id
+                        box,
+                        request.camera_id,
+                        request.intersection_id,
+                        request.frame_id,
+                        detection_index,
                     )
                     if detection:
                         vehicle_detections.append(detection)
+                        detection_index += 1
             
             return vehicle_detections
             
-        except Exception as e:
-            print(f"YOLO inference failed: {e}")
+        except Exception:
+            logger.error(
+                "YOLO inference failed for frame '%s'; falling back to mock detections.",
+                request.frame_id,
+                exc_info=True,
+            )
             return self._generate_mock_detections(request)
     
+    def _decode_image(self, image_data: str) -> "Image.Image":
+        """
+        Decode a base64-encoded image string into a PIL image.
+
+        Args:
+            image_data: Base64 encoded image data
+
+        Returns:
+            Decoded PIL image in RGB mode
+        """
+        image_bytes = base64.b64decode(
+            "".join(image_data.split()), validate=True
+        )
+        return Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
     def _convert_yolo_box_to_detection(
         self, 
         box, 
         camera_id: str, 
         intersection_id: str, 
-        frame_id: str
+        frame_id: str,
+        detection_index: int
     ) -> VehicleDetection:
         """
         Convert YOLO box to VehicleDetection domain model.
@@ -121,6 +156,7 @@ class ComputerVisionService:
             camera_id: Camera identifier
             intersection_id: Intersection identifier
             frame_id: Frame identifier
+            detection_index: Zero-based index of this detection within the frame
             
         Returns:
             VehicleDetection object or None if not a vehicle
@@ -159,7 +195,7 @@ class ComputerVisionService:
         
         # Create VehicleDetection
         return VehicleDetection(
-            detection_id=f"DET-{frame_id}-{len(box.xyxy)}",
+            detection_id=f"DET-{frame_id}-{detection_index:03d}",
             frame_id=frame_id,
             camera_id=camera_id,
             intersection_id=intersection_id,

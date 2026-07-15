@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from datetime import datetime
+from app.utils.fields import auto_timestamp_field
 from app.models.vehicle_detection import VehicleDetection
 
 
@@ -10,9 +11,13 @@ class VisionAnalysisRequest(BaseModel):
     camera_id: str = Field(..., description="Camera identifier")
     intersection_id: str = Field(..., description="Intersection identifier")
     frame_id: str = Field(..., description="Frame identifier")
-    image_data: str = Field(..., description="Base64 encoded image data")
+    image_data: str = Field(
+        ...,
+        description="Base64 encoded image data",
+        max_length=15_000_000,
+    )
     image_format: str = Field(default="jpg", description="Image format (jpg, png, etc.)")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(), description="Image capture timestamp")
+    timestamp: datetime = auto_timestamp_field("Image capture timestamp")
     
     model_config = ConfigDict(
         json_schema_extra={
@@ -37,7 +42,7 @@ class VisionAnalysisResponse(BaseModel):
     vehicle_detections: List[VehicleDetection] = Field(..., description="List of vehicle detections from YOLO")
     total_detections: int = Field(..., description="Total number of detections")
     inference_time_ms: float = Field(..., description="YOLO inference time in milliseconds", ge=0)
-    analysis_timestamp: datetime = Field(default_factory=lambda: datetime.now(), description="When analysis was performed")
+    analysis_timestamp: datetime = auto_timestamp_field("When analysis was performed")
     
     model_config = ConfigDict(
         json_schema_extra={

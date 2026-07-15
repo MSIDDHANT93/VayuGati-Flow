@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from datetime import datetime
+from app.utils.fields import auto_timestamp_field
 
 
 class ReasoningRequest(BaseModel):
@@ -48,7 +49,7 @@ class ReasoningResponse(BaseModel):
     confidence_score: float = Field(..., description="AI confidence in analysis (0-1)", ge=0, le=1)
     
     # Metadata
-    reasoning_timestamp: datetime = Field(default_factory=lambda: datetime.now(), description="When reasoning was performed")
+    reasoning_timestamp: datetime = auto_timestamp_field("When reasoning was performed")
     model_used: str = Field(..., description="Fireworks model used for reasoning")
     
     model_config = ConfigDict(

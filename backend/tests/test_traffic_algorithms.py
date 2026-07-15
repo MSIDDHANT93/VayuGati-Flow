@@ -297,6 +297,48 @@ class TestAverageSpeedCalculation:
         result = calculate_average_speed(detections)
         assert result == 45.0
 
+    def test_includes_stopped_vehicles(self):
+        """Regression: stopped vehicles (0 km/h) must be included in the average."""
+        detections = [
+            VehicleDetection(
+                detection_id=f"DET-{i:03d}",
+                frame_id="FRM-001",
+                camera_id="CAM-001",
+                intersection_id="INT-001",
+                vehicle_type=VehicleType.CAR,
+                confidence=0.95,
+                confidence_level=DetectionConfidence.HIGH,
+                bbox_x_min=0.25,
+                bbox_y_min=0.30,
+                bbox_x_max=0.45,
+                bbox_y_max=0.60,
+                speed_kmh=0.0,
+                direction_degrees=90.0,
+                detection_timestamp=datetime.now(UTC)
+            )
+            for i in range(9)
+        ] + [
+            VehicleDetection(
+                detection_id="DET-009",
+                frame_id="FRM-001",
+                camera_id="CAM-001",
+                intersection_id="INT-001",
+                vehicle_type=VehicleType.CAR,
+                confidence=0.95,
+                confidence_level=DetectionConfidence.HIGH,
+                bbox_x_min=0.50,
+                bbox_y_min=0.30,
+                bbox_x_max=0.70,
+                bbox_y_max=0.60,
+                speed_kmh=60.0,
+                direction_degrees=90.0,
+                detection_timestamp=datetime.now(UTC)
+            )
+        ]
+        # 9 stopped (0 km/h) + 1 moving (60 km/h) -> 60/10 = 6.0, not 60.0
+        result = calculate_average_speed(detections)
+        assert result == 6.0
+
 
 class TestOccupancyRateCalculation:
     """Tests for occupancy rate calculation algorithm."""

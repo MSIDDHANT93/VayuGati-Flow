@@ -1,16 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
+from functools import lru_cache
 from typing import Annotated
 
 from app.schemas.reasoning import ReasoningRequest, ReasoningResponse
 from app.schemas.common import APIResponse
 from app.services.reasoning_service import ReasoningService
+from app.utils.responses import execute_service
 
 
 router = APIRouter(prefix="/reasoning", tags=["reasoning"])
 
 
+@lru_cache
 def get_reasoning_service() -> ReasoningService:
-    """Dependency injection for reasoning service."""
+    """Dependency injection for reasoning service.
+
+    Cached so the Fireworks client is initialized once and reused across requests.
+    """
     return ReasoningService()
 
 
@@ -34,12 +40,9 @@ async def analyze_reasoning(
     
     If Fireworks AI is not available, the service returns mock responses based on congestion score.
     """
-    try:
-        result = service.analyze_traffic(request)
-        return APIResponse[ReasoningResponse](
-            success=True,
-            data=result,
-            errors=None
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI reasoning failed: {str(e)}")
+    return execute_service(
+        lambda: service.analyze_traffic(request),
+        "AI reasoning failed",
+        "AI reasoning failed for intersection '%s'",
+        request.intersection_id,
+    )

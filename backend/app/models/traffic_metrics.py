@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 from typing import Optional
 from datetime import datetime
+from app.utils.fields import auto_timestamp_field, entity_id_field
 
 
 class MetricsTimeWindow(str, Enum):
@@ -17,8 +18,8 @@ class MetricsTimeWindow(str, Enum):
 class TrafficMetrics(BaseModel):
     """Domain model representing aggregated traffic metrics for an intersection."""
     
-    metrics_id: str = Field(..., description="Unique identifier for the metrics record", min_length=1, max_length=50)
-    intersection_id: str = Field(..., description="ID of the intersection", min_length=1, max_length=50)
+    metrics_id: str = entity_id_field("Unique identifier for the metrics record")
+    intersection_id: str = entity_id_field("ID of the intersection")
     camera_id: Optional[str] = Field(None, description="ID of the camera if metrics are camera-specific", max_length=50)
     
     # Time window
@@ -64,7 +65,7 @@ class TrafficMetrics(BaseModel):
     frames_with_detections: int = Field(default=0, description="Number of frames with detections", ge=0)
     
     # Metadata
-    created_at: datetime = Field(default_factory=lambda: datetime.now(), description="Timestamp when metrics were created")
+    created_at: datetime = auto_timestamp_field("Timestamp when metrics were created")
     
     model_config = ConfigDict(
         json_schema_extra={

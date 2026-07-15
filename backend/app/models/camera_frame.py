@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 from typing import Optional
 from datetime import datetime
+from app.utils.fields import auto_timestamp_field, entity_id_field
 
 
 class FrameQuality(str, Enum):
@@ -16,9 +17,9 @@ class FrameQuality(str, Enum):
 class CameraFrame(BaseModel):
     """Domain model representing a single frame from a camera."""
     
-    frame_id: str = Field(..., description="Unique identifier for the frame", min_length=1, max_length=50)
-    camera_id: str = Field(..., description="ID of the camera that captured this frame", min_length=1, max_length=50)
-    intersection_id: str = Field(..., description="ID of the intersection being monitored", min_length=1, max_length=50)
+    frame_id: str = entity_id_field("Unique identifier for the frame")
+    camera_id: str = entity_id_field("ID of the camera that captured this frame")
+    intersection_id: str = entity_id_field("ID of the intersection being monitored")
     timestamp: datetime = Field(..., description="Timestamp when the frame was captured")
     frame_number: int = Field(..., description="Sequential frame number from camera stream", ge=0)
     width_pixels: int = Field(..., description="Frame width in pixels", ge=1)
@@ -31,7 +32,7 @@ class CameraFrame(BaseModel):
     file_path: Optional[str] = Field(None, description="Path to stored frame file", max_length=500)
     file_size_bytes: Optional[int] = Field(None, description="Size of frame file in bytes", ge=0)
     processing_status: str = Field(default="pending", description="Processing status of the frame", max_length=50)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(), description="Timestamp when frame record was created")
+    created_at: datetime = auto_timestamp_field("Timestamp when frame record was created")
     
     model_config = ConfigDict(
         json_schema_extra={
