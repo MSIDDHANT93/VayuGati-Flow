@@ -1,5 +1,5 @@
 import React from 'react'
-import { Activity, AlertTriangle, Clock, MapPin, Server, RefreshCw, Shield, Database, Network } from 'lucide-react'
+import { AlertTriangle, Clock, Server, RefreshCw, Shield, Database, Network } from 'lucide-react'
 
 interface TopBarProps {
   currentScenario: string

@@ -44,7 +44,7 @@ export const pipelineApi = {
     return response.data
   },
 
-  listScenarios: async () => Promise<{ scenarios: string[]; count: number }> => {
+  listScenarios: async (): Promise<{ scenarios: string[]; count: number }> => {
     const response = await apiClient.get('/api/v1/pipeline/scenarios')
     return response.data
   },

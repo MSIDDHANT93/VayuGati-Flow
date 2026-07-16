@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { Camera, Car, Truck, Activity, AlertCircle, Eye, Zap, Radio } from 'lucide-react'
+import { Car, Truck, Activity, AlertCircle, Eye } from 'lucide-react'
 import CameraFeed from '../panels/CameraFeed'
 import ImageUpload from '../panels/ImageUpload'
 import YoloDetections from '../panels/YoloDetections'
+import ConnectorStatusPanel from '../panels/ConnectorStatusPanel'
 import { PipelineResponse } from '../../api/pipeline'
 
 interface LeftPanelProps {
@@ -12,11 +13,10 @@ interface LeftPanelProps {
 }
 
 const LeftPanel: React.FC<LeftPanelProps> = ({ pipelineData, loading, error }) => {
-  const [uploadedImage, setUploadedImage] = useState<File | null>(null)
-  const [showUpload, setShowUpload] = useState(false)
+  const [showUpload] = useState(false)
 
-  const handleImageUpload = (file: File) => {
-    setUploadedImage(file)
+  const handleImageUpload = (_file: File) => {
+    // Image is handled by ImageUpload component internally; hook reserved for future wiring.
   }
 
   const getSituationStatus = (data: PipelineResponse | null) => {
@@ -70,32 +70,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ pipelineData, loading, error }) =
         )}
       </div>
 
-      {/* Sensor Status */}
-      <div className="h-20 border-t border-mission-border p-3">
-        <div className="text-xs font-semibold text-gray-400 mb-2">SENSOR ARRAY</div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-mission-dark rounded p-2 border border-mission-border">
-            <div className="flex items-center gap-1 mb-1">
-              <Camera className="w-3 h-3 text-mission-accent" />
-              <span className="text-[10px] text-gray-400">CAM</span>
-            </div>
-            <div className="text-xs font-mono text-mission-accent">ONLINE</div>
-          </div>
-          <div className="bg-mission-dark rounded p-2 border border-mission-border">
-            <div className="flex items-center gap-1 mb-1">
-              <Zap className="w-3 h-3 text-mission-warning" />
-              <span className="text-[10px] text-gray-400">YOLO</span>
-            </div>
-            <div className="text-xs font-mono text-mission-warning">ACTIVE</div>
-          </div>
-          <div className="bg-mission-dark rounded p-2 border border-mission-border">
-            <div className="flex items-center gap-1 mb-1">
-              <Radio className="w-3 h-3 text-mission-info" />
-              <span className="text-[10px] text-gray-400">NET</span>
-            </div>
-            <div className="text-xs font-mono text-mission-info">STABLE</div>
-          </div>
-        </div>
+      {/* Connector Status - plug-and-play platform extensibility */}
+      <div className="h-28 border-t border-mission-border p-3 overflow-y-auto scrollbar-thin">
+        <ConnectorStatusPanel />
       </div>
 
       {/* YOLO Detections */}

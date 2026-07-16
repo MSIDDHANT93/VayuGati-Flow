@@ -3,6 +3,7 @@ import { Brain, TrendingUp, AlertCircle, Target, CheckCircle, ArrowRight } from 
 import TrafficIntelligence from '../panels/TrafficIntelligence'
 import AIReasoning from '../panels/AIReasoning'
 import DecisionImpact from '../panels/DecisionImpact'
+import ConfidenceIndicators from '../panels/ConfidenceIndicators'
 import { PipelineResponse } from '../../api/pipeline'
 
 interface RightPanelProps {
@@ -37,6 +38,11 @@ const RightPanel: React.FC<RightPanelProps> = ({ pipelineData, loading, error })
           <Target className="w-3 h-3" />
           {priority.toUpperCase()} PRIORITY
         </div>
+      </div>
+
+      {/* Confidence Indicators */}
+      <div className="px-3 py-2 border-b border-mission-border">
+        <ConfidenceIndicators pipelineData={pipelineData} />
       </div>
 
       {/* Traffic Intelligence Panel */}
@@ -97,6 +103,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ pipelineData, loading, error })
           recommendations={pipelineData?.traffic_recommendations || []}
           confidence={pipelineData?.ai_confidence || 0}
           loading={loading}
+          pipelineData={pipelineData}
         />
       </div>
     </div>

@@ -11,6 +11,7 @@ Premium Digital Twin dashboard for traffic root cause analysis and decision supp
 - **Recharts** - Data Visualization
 - **Lucide React** - Icons
 - **Axios** - API Client
+- **MapLibre GL** - Operational GIS map (open-source, no API key required)
 
 ## Architecture
 
@@ -20,20 +21,21 @@ Premium Digital Twin dashboard for traffic root cause analysis and decision supp
 │  System Health | City Info | Time | Alerts               │
 ├──────────┬──────────────────────────────┬────────────────┤
 │ LEFT     │      MAIN AREA                │   RIGHT        │
-│ PANEL    │  Interactive City Map          │   PANEL        │
-│          │  - Intersection Markers       │                │
-│ Camera   │  - Traffic Overlays           │ Traffic        │
-│ Feed     │  - Real-time Updates          │ Intelligence   │
+│ PANEL    │  Operational Map (MapLibre)   │   PANEL        │
+│          │  - Roads / Intersections      │                │
+│ Camera   │  - Cameras / Incidents        │ Confidence     │
+│ Feed     │  - Layer Controls             │ Indicators     │
+│          │  - Intersection Panel         │                │
+│ Connector│                              │ Traffic        │
+│ Status   │                              │ Intelligence   │
 │          │                              │                │
-│ YOLO     │                              │ Queue          │
-│ Detections│                             │ Density        │
-│          │                              │ LOS            │
-│ Vehicle  │                              │ Risk           │
-│ Counts   │                              │                │
-│          │                              │ AI Reasoning   │
+│ YOLO     │                              │ AI Reasoning   │
+│ Detections│                             │                │
+│ Vehicle  │                              │ Decision       │
+│ Counts   │                              │ Impact (Sim)   │
 ├──────────┴──────────────────────────────┴────────────────┤
 │                    BOTTOM PANEL                            │
-│  Historical Trends | Simulation Controls | Timeline       │
+│  Mission Pipeline Timeline | Scenario Timeline | Trends   │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -68,16 +70,28 @@ VITE_API_BASE_URL=http://localhost:8000
 ### Layout Components
 
 - **TopBar** - System status, city info, time, alerts
-- **LeftPanel** - Camera feeds, YOLO detections, vehicle counts
-- **RightPanel** - Traffic intelligence, AI reasoning
-- **BottomPanel** - Historical trends, simulation controls
-- **MainArea** - Interactive city map
+- **LeftPanel** - Camera feed, connector status, YOLO detections, vehicle counts
+- **RightPanel** - Confidence indicators, traffic intelligence, AI reasoning, decision impact
+- **BottomPanel** - Mission pipeline timeline, scenario timeline, historical trends
+- **MainArea** - Operational map orchestration (layers, intersection selection, alerts)
+
+### Map Components (`components/map`)
+
+- **OperationalMap** - MapLibre GL canvas rendering roads, intersections, cameras and incidents. Intersection color reflects live congestion score for the active node.
+- **LayerControls** - GIS-style toggles for Traffic, Cameras, Incidents, Weather, Construction, PM GatiShakti, Emergency Assets (last four are placeholder/extensibility layers, disabled by default).
+- **IntersectionPanel** - Operational detail panel shown when an intersection marker is clicked (queue, LOS, risk, vehicle count, camera status, simulation status). Falls back to camera-only view for non-live (mock) intersections.
+
+GIS reference data (intersection/camera/incident coordinates, road network, connector statuses) lives in `src/data/gisData.ts`. The backend has no geospatial endpoints, so these coordinates are a stable frontend-only digital-twin layer; live operational metrics for the primary intersection still come from the real pipeline API.
 
 ### Panel Components
 
 - **CameraFeed** - Live camera feeds with YOLO detection overlay
+- **ConnectorStatusPanel** - Plug-and-play connector/integration status (CCTV, Traffic Engine, AI Reasoning, Weather, PM GatiShakti, Satellite, IoT, ANPR)
+- **MissionTimeline** - Operational pipeline stages (Image → YOLO → Traffic Intelligence → AI Reasoning → Simulation → Commander Decision) with per-stage latency/confidence
+- **ConfidenceIndicators** - Confidence bars for Vision, Traffic, Reasoning, Simulation and Overall Mission
 - **TrafficIntelligence** - Queue, density, speed, LOS, risk metrics
 - **AIReasoning** - Fireworks AI explanations and recommendations
+- **DecisionImpact** - Animated before/after simulation comparison (queue, speed, LOS, risk) with implementation confidence
 - **HistoricalTrends** - Time-series data visualization
 
 ## API Integration
@@ -95,6 +109,7 @@ The frontend connects to the backend FastAPI services:
 - **Minimal Animations** - Professional appearance
 - **Reusable Components** - Modular architecture
 - **Type Safety** - Full TypeScript coverage
+- **Separation of Concerns** - Frontend only orchestrates display; Vision, Traffic Intelligence, Reasoning and Simulation remain independent backend services
 
 ## Development
 
