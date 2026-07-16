@@ -21,6 +21,8 @@ const LayerControls: React.FC<LayerControlsProps> = ({ visibleLayers, onToggle }
             <button
               key={layer.id}
               onClick={() => onToggle(layer.id)}
+              aria-pressed={active}
+              aria-label={`Toggle ${layer.label} layer`}
               className="w-full flex items-center justify-between text-[10px] px-1.5 py-1 rounded hover:bg-mission-dark transition-colors"
             >
               <span className={active ? 'text-gray-200' : 'text-gray-500'}>

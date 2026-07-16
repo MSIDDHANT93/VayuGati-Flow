@@ -1,21 +1,25 @@
-import React, { useState } from 'react'
+import React, { Suspense, lazy, useState } from 'react'
 import { Target, AlertTriangle, Activity } from 'lucide-react'
 import { PipelineResponse } from '../../api/pipeline'
-import OperationalMap from '../map/OperationalMap'
 import LayerControls from '../map/LayerControls'
 import IntersectionPanel from '../map/IntersectionPanel'
 import { MOCK_INTERSECTIONS, MOCK_CAMERAS, MAP_LAYERS, MapLayerId } from '../../data/gisData'
 
+// Code-split the MapLibre-backed map: it is the single largest dependency in
+// the bundle, so defer loading it until MainArea actually mounts.
+const OperationalMap = lazy(() => import('../map/OperationalMap'))
+
 interface MainAreaProps {
   pipelineData: PipelineResponse | null
   loading: boolean
+  error?: string | null
 }
 
 const defaultLayers = new Set<MapLayerId>(
   MAP_LAYERS.filter((l) => l.defaultOn).map((l) => l.id)
 )
 
-const MainArea: React.FC<MainAreaProps> = ({ pipelineData, loading }) => {
+const MainArea: React.FC<MainAreaProps> = ({ pipelineData, loading, error }) => {
   const [selectedIntersectionId, setSelectedIntersectionId] = useState(
     pipelineData?.intersection_id || 'INT-001'
   )
@@ -36,12 +40,20 @@ const MainArea: React.FC<MainAreaProps> = ({ pipelineData, loading }) => {
     <div className="flex-1 bg-mission-dark relative overflow-hidden">
       {/* Operational Map */}
       <div className="absolute inset-0">
-        <OperationalMap
-          pipelineData={pipelineData}
-          selectedIntersectionId={selectedIntersectionId}
-          onSelectIntersection={setSelectedIntersectionId}
-          visibleLayers={visibleLayers}
-        />
+        <Suspense
+          fallback={
+            <div className="w-full h-full flex items-center justify-center bg-mission-dark">
+              <span className="text-xs font-mono text-gray-500">Loading operational map...</span>
+            </div>
+          }
+        >
+          <OperationalMap
+            pipelineData={pipelineData}
+            selectedIntersectionId={selectedIntersectionId}
+            onSelectIntersection={setSelectedIntersectionId}
+            visibleLayers={visibleLayers}
+          />
+        </Suspense>
       </div>
 
       {/* Top Left - Operational Status */}
@@ -109,9 +121,19 @@ const MainArea: React.FC<MainAreaProps> = ({ pipelineData, loading }) => {
       </div>
 
       {/* Loading Overlay */}
-      {loading && (
+      {loading && !error && (
         <div className="absolute inset-0 flex items-center justify-center bg-mission-black/40 pointer-events-none">
           <span className="text-xs font-mono text-mission-accent animate-pulse">SYNCING OPERATIONAL DATA...</span>
+        </div>
+      )}
+
+      {/* Error Overlay - operational data feed unavailable */}
+      {error && !loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-mission-black/60">
+          <div className="flex items-center gap-2 bg-mission-panel border border-mission-danger rounded px-4 py-2">
+            <AlertTriangle className="w-4 h-4 text-mission-danger" />
+            <span className="text-xs font-semibold text-mission-danger">OPERATIONAL FEED UNAVAILABLE — {error}</span>
+          </div>
         </div>
       )}
 

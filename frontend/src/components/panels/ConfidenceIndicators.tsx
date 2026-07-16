@@ -27,7 +27,7 @@ const ConfidenceIndicators: React.FC<ConfidenceIndicatorsProps> = ({ pipelineDat
     <div className="grid grid-cols-5 gap-1.5">
       {metrics.map((m) => (
         <div key={m.label} className="bg-mission-dark rounded border border-mission-border px-1.5 py-1">
-          <div className="text-[8px] text-gray-500 mb-0.5">{m.label}</div>
+          <div className="text-[10px] text-gray-500 mb-0.5">{m.label}</div>
           <div className="text-[10px] font-mono font-semibold text-gray-200 mb-1">
             {data ? `${(m.value * 100).toFixed(0)}%` : '--'}
           </div>

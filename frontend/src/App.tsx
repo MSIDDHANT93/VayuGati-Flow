@@ -46,6 +46,9 @@ function App() {
         currentScenario={currentScenario}
         onScenarioChange={setCurrentScenario}
         loading={loading}
+        error={error}
+        pipelineData={pipelineData}
+        onRetry={loadPipelineData}
       />
       
       {/* Main Content Area */}
@@ -54,14 +57,14 @@ function App() {
         <LeftPanel pipelineData={pipelineData} loading={loading} error={error} />
         
         {/* Main Area - Interactive Map */}
-        <MainArea pipelineData={pipelineData} loading={loading} />
+        <MainArea pipelineData={pipelineData} loading={loading} error={error} />
         
         {/* Right Panel - Traffic Intelligence */}
         <RightPanel pipelineData={pipelineData} loading={loading} error={error} />
       </div>
       
       {/* Bottom Panel - Historical Trends */}
-      <BottomPanel pipelineData={pipelineData} loading={loading} />
+      <BottomPanel pipelineData={pipelineData} loading={loading} error={error} />
     </div>
   )
 }

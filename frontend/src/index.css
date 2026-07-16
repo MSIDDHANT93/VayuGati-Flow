@@ -6,6 +6,24 @@
   body {
     @apply bg-mission-black text-gray-100 font-sans antialiased;
   }
+
+  /* Consistent, visible keyboard focus across all interactive elements */
+  *:focus-visible {
+    outline: 2px solid #00ff88;
+    outline-offset: 2px;
+  }
+
+  /* Respect user preference for reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer utilities {

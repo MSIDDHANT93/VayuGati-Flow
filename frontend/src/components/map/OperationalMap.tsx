@@ -72,6 +72,7 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
         el.className = 'op-map-intersection-marker'
         el.dataset.intersectionId = intersection.id
         el.style.cursor = 'pointer'
+        el.style.transition = 'width 150ms ease, height 150ms ease, box-shadow 150ms ease, border 150ms ease'
         el.onclick = () => onSelectIntersection(intersection.id)
 
         const marker = new maplibregl.Marker({ element: el, anchor: 'center' })

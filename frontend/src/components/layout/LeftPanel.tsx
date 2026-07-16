@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Car, Truck, Activity, AlertCircle, Eye } from 'lucide-react'
 import CameraFeed from '../panels/CameraFeed'
-import ImageUpload from '../panels/ImageUpload'
 import YoloDetections from '../panels/YoloDetections'
 import ConnectorStatusPanel from '../panels/ConnectorStatusPanel'
 import { PipelineResponse } from '../../api/pipeline'
@@ -13,12 +12,6 @@ interface LeftPanelProps {
 }
 
 const LeftPanel: React.FC<LeftPanelProps> = ({ pipelineData, loading, error }) => {
-  const [showUpload] = useState(false)
-
-  const handleImageUpload = (_file: File) => {
-    // Image is handled by ImageUpload component internally; hook reserved for future wiring.
-  }
-
   const getSituationStatus = (data: PipelineResponse | null) => {
     if (!data) return 'unknown'
     if (data.risk_score > 0.6) return 'critical'
@@ -27,6 +20,11 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ pipelineData, loading, error }) =
   }
 
   const situationStatus = getSituationStatus(pipelineData)
+
+  const totalVehicles = pipelineData?.total_vehicles || 0
+  const emergCount = pipelineData?.scenario === 'accident' || pipelineData?.scenario === 'emergency_vehicle' ? 1 : 0
+  const truckCount = Math.floor(totalVehicles * 0.25)
+  const carCount = Math.max(totalVehicles - truckCount - emergCount, 0)
 
   return (
     <div className="w-96 bg-mission-panel border-r border-mission-border flex flex-col">
@@ -59,8 +57,6 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ pipelineData, loading, error }) =
               <div className="text-xs text-mission-danger">{error}</div>
             </div>
           </div>
-        ) : showUpload ? (
-          <ImageUpload onImageUpload={handleImageUpload} loading={loading} />
         ) : loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-xs text-gray-500">Acquiring sensor data...</div>
@@ -82,25 +78,28 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ pipelineData, loading, error }) =
 
       {/* Vehicle Counts */}
       <div className="h-28 border-t border-mission-border p-3">
-        <div className="text-xs font-semibold text-gray-400 mb-2">DETECTED ASSETS</div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold text-gray-400">DETECTED ASSETS</span>
+          <span className="text-[10px] text-gray-600">est. split</span>
+        </div>
         <div className="grid grid-cols-4 gap-2">
           <div className="bg-mission-dark rounded p-2 border border-mission-border">
             <div className="flex items-center justify-center mb-1">
               <Car className="w-3 h-3 text-mission-accent" />
             </div>
             <div className="text-sm font-mono font-semibold text-gray-200 text-center">
-              {loading ? '...' : pipelineData?.total_vehicles || 0}
+              {loading ? '...' : carCount}
             </div>
-            <div className="text-[9px] text-gray-500 text-center">CARS</div>
+            <div className="text-[10px] text-gray-500 text-center">CARS</div>
           </div>
           <div className="bg-mission-dark rounded p-2 border border-mission-border">
             <div className="flex items-center justify-center mb-1">
               <Truck className="w-3 h-3 text-mission-warning" />
             </div>
             <div className="text-sm font-mono font-semibold text-gray-200 text-center">
-              {loading ? '...' : Math.floor((pipelineData?.total_vehicles || 0) * 0.25)}
+              {loading ? '...' : truckCount}
             </div>
-            <div className="text-[9px] text-gray-500 text-center">TRUCKS</div>
+            <div className="text-[10px] text-gray-500 text-center">TRUCKS</div>
           </div>
           <div className="bg-mission-dark rounded p-2 border border-mission-border">
             <div className="flex items-center justify-center mb-1">
@@ -109,16 +108,16 @@ const LeftPanel: React.FC<LeftPanelProps> = ({ pipelineData, loading, error }) =
             <div className="text-sm font-mono font-semibold text-gray-200 text-center">
               {loading ? '...' : pipelineData?.total_vehicles || 0}
             </div>
-            <div className="text-[9px] text-gray-500 text-center">TOTAL</div>
+            <div className="text-[10px] text-gray-500 text-center">TOTAL</div>
           </div>
           <div className="bg-mission-dark rounded p-2 border border-mission-border">
             <div className="flex items-center justify-center mb-1">
               <Activity className="w-3 h-3 text-mission-danger" />
             </div>
             <div className="text-sm font-mono font-semibold text-mission-danger text-center">
-              {loading ? '...' : (pipelineData?.scenario === 'accident' || pipelineData?.scenario === 'emergency_vehicle' ? 1 : 0)}
+              {loading ? '...' : emergCount}
             </div>
-            <div className="text-[9px] text-gray-500 text-center">EMERG</div>
+            <div className="text-[10px] text-gray-500 text-center">EMERG</div>
           </div>
         </div>
       </div>

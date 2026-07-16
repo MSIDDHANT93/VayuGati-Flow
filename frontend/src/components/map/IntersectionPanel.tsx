@@ -25,7 +25,7 @@ const IntersectionPanel: React.FC<IntersectionPanelProps> = ({
           <MapPin className="w-3.5 h-3.5 text-mission-accent" />
           <span className="text-xs font-semibold text-gray-200">{intersectionId}</span>
         </div>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-300">
+        <button onClick={onClose} aria-label="Close intersection panel" className="text-gray-500 hover:text-gray-300">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>

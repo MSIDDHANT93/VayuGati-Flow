@@ -92,14 +92,19 @@ const CourseOfActionCard: React.FC<CourseOfActionCardProps> = ({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-200 truncate">{coa.title}</span>
-            <span className={`text-[9px] font-mono ${tagColor(coa.costTag)}`}>{coa.costTag}</span>
-            <span className={`text-[9px] font-mono ${tagColor(coa.implementationTag)}`}>
+            <span className={`text-[10px] font-mono ${tagColor(coa.costTag)}`}>{coa.costTag}</span>
+            <span className={`text-[10px] font-mono ${tagColor(coa.implementationTag)}`}>
               {coa.implementationTag}
             </span>
           </div>
           <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2">{coa.description}</p>
         </div>
-        <button onClick={() => setExpanded((e) => !e)} className="text-gray-500 hover:text-gray-300 flex-shrink-0">
+        <button
+          onClick={() => setExpanded((e) => !e)}
+          aria-expanded={expanded}
+          aria-label={expanded ? `Collapse ${coa.title}` : `Expand ${coa.title}`}
+          className="text-gray-500 hover:text-gray-300 flex-shrink-0"
+        >
           {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
       </div>
@@ -138,7 +143,7 @@ const CourseOfActionCard: React.FC<CourseOfActionCardProps> = ({
 
           {/* Evidence / explainability */}
           <div className="bg-mission-panel rounded border border-mission-border p-2">
-            <div className="text-[9px] font-semibold text-gray-500 mb-1">EVIDENCE</div>
+            <div className="text-[10px] font-semibold text-gray-500 mb-1">EVIDENCE</div>
             <ul className="space-y-0.5">
               {coa.evidence.map((e, i) => (
                 <li key={i} className="text-[10px] text-gray-400 flex items-start gap-1.5">
@@ -208,7 +213,7 @@ const CourseOfActionCard: React.FC<CourseOfActionCardProps> = ({
 
 const MiniMetric: React.FC<{ label: string; value: string; accent?: boolean }> = ({ label, value, accent }) => (
   <div className="bg-mission-panel rounded border border-mission-border px-1.5 py-1 text-center">
-    <div className="text-[8px] text-gray-500">{label}</div>
+    <div className="text-[10px] text-gray-500">{label}</div>
     <div className={`text-[10px] font-mono font-semibold ${accent ? 'text-mission-accent' : 'text-gray-200'}`}>
       {value}
     </div>

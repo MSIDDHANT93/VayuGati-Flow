@@ -53,15 +53,15 @@ const MissionTimeline: React.FC<MissionTimelineProps> = ({ pipelineData, loading
                 stage.icon
               )}
             </div>
-            <span className="text-[9px] text-gray-400 mt-1 truncate">{stage.label}</span>
+            <span className="text-[10px] text-gray-400 mt-1 truncate">{stage.label}</span>
             {stage.id !== 'image' && stage.id !== 'decision' && (
-              <span className="text-[8px] font-mono text-gray-500">
+              <span className="text-[10px] font-mono text-gray-500">
                 {data ? `${stage.latencyMs.toFixed(0)}ms` : '--'}
               </span>
             )}
             {stage.id !== 'image' && (
               <span
-                className={`text-[8px] font-mono ${
+                className={`text-[10px] font-mono ${
                   data && stage.confidence > 0.7 ? 'text-mission-accent' : 'text-gray-500'
                 }`}
               >
@@ -75,7 +75,7 @@ const MissionTimeline: React.FC<MissionTimelineProps> = ({ pipelineData, loading
         </React.Fragment>
       ))}
       {data && (
-        <div className="flex items-center gap-1 ml-2 flex-shrink-0 text-[9px] text-mission-accent">
+        <div className="flex items-center gap-1 ml-2 flex-shrink-0 text-[10px] text-mission-accent">
           <CheckCircle2 className="w-3 h-3" />
           {totalMs.toFixed(0)}ms
         </div>

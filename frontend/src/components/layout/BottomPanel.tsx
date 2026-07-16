@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Play, Pause, RotateCcw, Clock, ChevronLeft, ChevronRight, GitBranch } from 'lucide-react'
+import React from 'react'
+import { Clock, ChevronLeft, ChevronRight, GitBranch, AlertCircle } from 'lucide-react'
 import HistoricalTrends from '../panels/HistoricalTrends'
 import MissionTimeline from '../panels/MissionTimeline'
 import { PipelineResponse } from '../../api/pipeline'
@@ -7,11 +7,11 @@ import { PipelineResponse } from '../../api/pipeline'
 interface BottomPanelProps {
   pipelineData: PipelineResponse | null
   loading: boolean
+  error?: string | null
 }
 
-const BottomPanel: React.FC<BottomPanelProps> = ({ pipelineData, loading }) => {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime] = useState(12) // 12:00 PM
+const BottomPanel: React.FC<BottomPanelProps> = ({ pipelineData, loading, error }) => {
+  const currentTime = 4 // index for '12:00' — matches the illustrative midday peak below
 
   const timeSlots = [
     { time: '08:00', label: '8AM' },
@@ -59,28 +59,21 @@ const BottomPanel: React.FC<BottomPanelProps> = ({ pipelineData, loading }) => {
           )}
         </div>
         
-        {/* Playback Controls */}
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1 px-2 py-1 bg-mission-dark border border-mission-border rounded hover:border-mission-accent transition-colors">
+        {/* Timeline navigation (reference pattern - not yet connected to live playback) */}
+        <div className="flex items-center gap-2" aria-disabled="true">
+          <button
+            disabled
+            aria-label="Previous time slot (unavailable)"
+            className="flex items-center gap-1 px-2 py-1 bg-mission-dark border border-mission-border rounded opacity-40 cursor-not-allowed"
+          >
             <ChevronLeft className="w-3 h-3 text-gray-400" />
           </button>
-          <button 
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="flex items-center gap-1 px-3 py-1 bg-mission-dark border border-mission-border rounded hover:border-mission-accent transition-colors"
+          <button
+            disabled
+            aria-label="Next time slot (unavailable)"
+            className="flex items-center gap-1 px-2 py-1 bg-mission-dark border border-mission-border rounded opacity-40 cursor-not-allowed"
           >
-            {isPlaying ? (
-              <Pause className="w-3 h-3 text-mission-warning" />
-            ) : (
-              <Play className="w-3 h-3 text-mission-accent" />
-            )}
-          </button>
-          <button className="flex items-center gap-1 px-2 py-1 bg-mission-dark border border-mission-border rounded hover:border-mission-accent transition-colors">
             <ChevronRight className="w-3 h-3 text-gray-400" />
-          </button>
-          <div className="w-px h-6 bg-mission-border mx-2" />
-          <button className="flex items-center gap-1 px-3 py-1 bg-mission-dark border border-mission-border rounded hover:border-mission-info transition-colors">
-            <RotateCcw className="w-3 h-3 text-mission-info" />
-            <span className="text-xs text-gray-300">RESET</span>
           </button>
         </div>
       </div>
@@ -94,9 +87,12 @@ const BottomPanel: React.FC<BottomPanelProps> = ({ pipelineData, loading }) => {
         <MissionTimeline pipelineData={pipelineData} loading={loading} />
       </div>
 
-      {/* Scenario Timeline */}
-      <div className="h-14 border-b border-mission-border px-4 py-2">
-        <div className="flex items-center justify-between h-full">
+      {/* Reference Daily Pattern (illustrative, not scenario-specific) */}
+      <div className="h-16 border-b border-mission-border px-4 py-2">
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="text-[10px] font-semibold text-gray-600 tracking-wide">REFERENCE DAILY PATTERN</span>
+        </div>
+        <div className="flex items-center justify-between" style={{ height: 'calc(100% - 16px)' }}>
           {timeSlots.map((slot, index) => (
             <div key={slot.time} className="flex flex-col items-center gap-1 flex-1">
               <div className={`w-full h-2 rounded ${getCongestionColor(getCongestionLevel(index))} ${
@@ -114,7 +110,14 @@ const BottomPanel: React.FC<BottomPanelProps> = ({ pipelineData, loading }) => {
 
       {/* Historical Trends */}
       <div className="flex-1 p-2 overflow-hidden">
-        {loading ? (
+        {error ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="flex items-center gap-2 text-mission-danger">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-xs">Temporal data unavailable — {error}</span>
+            </div>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-xs text-gray-500">Loading temporal data...</div>
           </div>

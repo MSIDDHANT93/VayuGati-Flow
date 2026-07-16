@@ -22,13 +22,13 @@ const DecisionScore: React.FC<DecisionScoreProps> = ({ score, focusedTitle }) =>
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[10px] font-semibold text-gray-400">DECISION SCORE</span>
         {focusedTitle && (
-          <span className="text-[9px] text-gray-500 truncate max-w-[140px]">FOCUS: {focusedTitle}</span>
+          <span className="text-[10px] text-gray-500 truncate max-w-[140px]">FOCUS: {focusedTitle}</span>
         )}
       </div>
       <div className="grid grid-cols-5 gap-1.5">
         {metrics.map((m) => (
           <div key={m.label} className="bg-mission-dark rounded border border-mission-border px-1.5 py-1">
-            <div className="text-[8px] text-gray-500 mb-0.5 truncate">{m.label}</div>
+            <div className="text-[10px] text-gray-500 mb-0.5 truncate">{m.label}</div>
             <div className="text-[10px] font-mono font-semibold text-gray-200 mb-1">
               {(m.value * 100).toFixed(0)}%
             </div>

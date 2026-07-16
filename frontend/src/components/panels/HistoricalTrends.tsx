@@ -19,7 +19,8 @@ const HistoricalTrends: React.FC = () => {
   ]
 
   return (
-    <div className="h-full">
+    <div className="h-full flex flex-col">
+      <div className="text-[10px] text-gray-600 mb-1 flex-shrink-0">Reference trend (illustrative)</div>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
