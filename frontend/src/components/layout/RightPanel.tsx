@@ -1,8 +1,8 @@
 import React from 'react'
-import { Brain, TrendingUp, AlertCircle, Target, CheckCircle, ArrowRight } from 'lucide-react'
+import { Brain, TrendingUp, AlertCircle, Target, CheckCircle } from 'lucide-react'
 import TrafficIntelligence from '../panels/TrafficIntelligence'
 import AIReasoning from '../panels/AIReasoning'
-import DecisionImpact from '../panels/DecisionImpact'
+import DecisionIntelligence from '../panels/DecisionIntelligence'
 import ConfidenceIndicators from '../panels/ConfidenceIndicators'
 import { PipelineResponse } from '../../api/pipeline'
 
@@ -64,7 +64,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ pipelineData, loading, error })
       </div>
 
       {/* AI Reasoning Panel */}
-      <div className="h-44 border-t border-mission-border p-3">
+      <div className="h-36 border-t border-mission-border p-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-mission-info" />
@@ -86,25 +86,9 @@ const RightPanel: React.FC<RightPanelProps> = ({ pipelineData, loading, error })
         )}
       </div>
 
-      {/* Decision Impact Panel */}
-      <div className="h-56 border-t border-mission-border p-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <ArrowRight className="w-4 h-4 text-mission-warning" />
-            <span className="text-xs font-semibold text-gray-400">RECOMMENDED ACTIONS</span>
-          </div>
-          {pipelineData && pipelineData.traffic_recommendations.length > 0 && (
-            <div className="text-[10px] text-mission-accent font-mono">
-              {pipelineData.traffic_recommendations.length} OPTIONS
-            </div>
-          )}
-        </div>
-        <DecisionImpact 
-          recommendations={pipelineData?.traffic_recommendations || []}
-          confidence={pipelineData?.ai_confidence || 0}
-          loading={loading}
-          pipelineData={pipelineData}
-        />
+      {/* Decision Intelligence - AI Courses of Action, Decision Score, Mission Log */}
+      <div className="h-[480px] border-t border-mission-border p-3">
+        <DecisionIntelligence pipelineData={pipelineData} loading={loading} />
       </div>
     </div>
   )
