@@ -4,6 +4,7 @@ import { PipelineResponse } from '../../api/pipeline'
 import LayerControls from '../map/LayerControls'
 import IntersectionPanel from '../map/IntersectionPanel'
 import { MOCK_INTERSECTIONS, MOCK_CAMERAS, MAP_LAYERS, MapLayerId } from '../../data/gisData'
+import useAnimatedValue from '../../lib/useAnimatedValue'
 
 // Code-split the MapLibre-backed map: it is the single largest dependency in
 // the bundle, so defer loading it until MainArea actually mounts.
@@ -35,6 +36,11 @@ const MainArea: React.FC<MainAreaProps> = ({ pipelineData, loading, error }) => 
   }
 
   const onlineCameras = MOCK_CAMERAS.filter((c) => c.status === 'online').length
+
+  // Smoothly interpolate live metrics so scenario changes ease rather than jump
+  const animQueue = useAnimatedValue(pipelineData?.queue_length_meters ?? 0)
+  const animSpeed = useAnimatedValue(pipelineData?.average_speed_kmh ?? 0)
+  const animRisk = useAnimatedValue(pipelineData?.risk_score ?? 0)
 
   return (
     <div className="flex-1 bg-mission-dark relative overflow-hidden">
@@ -92,16 +98,16 @@ const MainArea: React.FC<MainAreaProps> = ({ pipelineData, loading, error }) => 
             <div className="space-y-1 text-xs">
               <div className="flex justify-between gap-4">
                 <span className="text-gray-500">Queue Length</span>
-                <span className="text-gray-300 font-mono">{pipelineData.queue_length_meters.toFixed(1)}m</span>
+                <span className="text-gray-300 font-mono">{animQueue.toFixed(1)}m</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-gray-500">Avg Speed</span>
-                <span className="text-gray-300 font-mono">{pipelineData.average_speed_kmh.toFixed(1)} km/h</span>
+                <span className="text-gray-300 font-mono">{animSpeed.toFixed(1)} km/h</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-gray-500">Risk Score</span>
                 <span className={`font-mono ${pipelineData.risk_score > 0.5 ? 'text-mission-danger' : 'text-mission-accent'}`}>
-                  {pipelineData.risk_score.toFixed(2)}
+                  {animRisk.toFixed(2)}
                 </span>
               </div>
             </div>

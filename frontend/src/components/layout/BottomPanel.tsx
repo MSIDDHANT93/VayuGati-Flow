@@ -2,6 +2,7 @@ import React from 'react'
 import { Clock, ChevronLeft, ChevronRight, GitBranch, AlertCircle } from 'lucide-react'
 import HistoricalTrends from '../panels/HistoricalTrends'
 import MissionTimeline from '../panels/MissionTimeline'
+import OperationalMemory from '../panels/OperationalMemory'
 import { PipelineResponse } from '../../api/pipeline'
 
 interface BottomPanelProps {
@@ -44,7 +45,7 @@ const BottomPanel: React.FC<BottomPanelProps> = ({ pipelineData, loading, error 
   }
 
   return (
-    <div className="h-56 bg-mission-panel border-t border-mission-border flex flex-col">
+    <div className="h-64 bg-mission-panel border-t border-mission-border flex flex-col">
       {/* Header */}
       <div className="h-10 border-b border-mission-border flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
@@ -108,22 +109,27 @@ const BottomPanel: React.FC<BottomPanelProps> = ({ pipelineData, loading, error 
         </div>
       </div>
 
-      {/* Historical Trends */}
-      <div className="flex-1 p-2 overflow-hidden">
-        {error ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="flex items-center gap-2 text-mission-danger">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-xs">Temporal data unavailable — {error}</span>
+      {/* Historical Trends + Operational Memory */}
+      <div className="flex-1 flex overflow-hidden">
+        <div className="w-1/2 p-2 overflow-hidden border-r border-mission-border">
+          {error ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="flex items-center gap-2 text-mission-danger">
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-xs">Temporal data unavailable — {error}</span>
+              </div>
             </div>
-          </div>
-        ) : loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-xs text-gray-500">Loading temporal data...</div>
-          </div>
-        ) : (
-          <HistoricalTrends />
-        )}
+          ) : loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-xs text-gray-500">Loading temporal data...</div>
+            </div>
+          ) : (
+            <HistoricalTrends />
+          )}
+        </div>
+        <div className="w-1/2 p-2 overflow-hidden">
+          <OperationalMemory pipelineData={pipelineData} />
+        </div>
       </div>
     </div>
   )

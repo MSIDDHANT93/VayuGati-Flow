@@ -30,12 +30,6 @@ export interface MapIncident {
   severity: 'low' | 'medium' | 'high'
 }
 
-export interface ConnectorStatus {
-  id: string
-  name: string
-  status: 'online' | 'degraded' | 'offline'
-}
-
 // Center of operational area (used for demo purposes)
 export const MAP_CENTER: [number, number] = [77.5946, 12.9716]
 
@@ -95,15 +89,25 @@ export const ROAD_NETWORK: GeoJSON.FeatureCollection = {
   }),
 }
 
-export const CONNECTOR_STATUSES: ConnectorStatus[] = [
-  { id: 'cctv', name: 'CCTV', status: 'online' },
-  { id: 'traffic_engine', name: 'Traffic Engine', status: 'online' },
-  { id: 'ai_reasoning', name: 'AI Reasoning', status: 'online' },
-  { id: 'weather', name: 'Weather', status: 'degraded' },
-  { id: 'pm_gatishakti', name: 'PM GatiShakti', status: 'offline' },
-  { id: 'satellite', name: 'Satellite', status: 'offline' },
-  { id: 'iot', name: 'IoT Sensors', status: 'offline' },
-  { id: 'anpr', name: 'ANPR', status: 'offline' },
+// Connector Health — richer view of the data ingestion layer.
+// 'live' connectors are backed by the current demo pipeline;
+// 'planned' connectors are future integrations shown clearly as placeholders.
+export interface ConnectorHealth {
+  id: string
+  name: string
+  status: 'online' | 'degraded' | 'offline'
+  source: 'live' | 'planned'
+  latencyMs: number | null
+  detail: string
+}
+
+export const CONNECTOR_HEALTH: ConnectorHealth[] = [
+  { id: 'cctv', name: 'CCTV', status: 'online', source: 'live', latencyMs: 42, detail: 'Vision feed via demo pipeline' },
+  { id: 'weather', name: 'Weather', status: 'degraded', source: 'planned', latencyMs: 610, detail: 'Placeholder — IMD feed planned' },
+  { id: 'pm_gatishakti', name: 'PM GatiShakti', status: 'offline', source: 'planned', latencyMs: null, detail: 'Placeholder — infra layer planned' },
+  { id: 'satellite', name: 'Satellite', status: 'offline', source: 'planned', latencyMs: null, detail: 'Placeholder — imagery ingest planned' },
+  { id: 'iot', name: 'IoT Sensors', status: 'offline', source: 'planned', latencyMs: null, detail: 'Placeholder — roadside sensors planned' },
+  { id: 'emergency', name: 'Emergency Services', status: 'degraded', source: 'planned', latencyMs: 890, detail: 'Placeholder — dispatch API planned' },
 ]
 
 export type MapLayerId =
