@@ -19,10 +19,10 @@ const DecisionScore: React.FC<DecisionScoreProps> = ({ score, focusedTitle }) =>
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-semibold text-gray-400">DECISION SCORE</span>
+      <div className="flex items-center justify-between gap-2 mb-1.5 min-w-0">
+        <span className="text-[10px] font-semibold text-gray-400 flex-shrink-0">DECISION SCORE</span>
         {focusedTitle && (
-          <span className="text-[10px] text-gray-500 truncate max-w-[140px]">FOCUS: {focusedTitle}</span>
+          <span className="text-[10px] text-gray-500 truncate min-w-0" title={focusedTitle}>FOCUS: {focusedTitle}</span>
         )}
       </div>
       <div className="grid grid-cols-5 gap-1.5">

@@ -23,9 +23,9 @@ const RightPanel: React.FC<RightPanelProps> = ({ pipelineData, loading, error })
   const priority = getPriorityLevel(pipelineData)
 
   return (
-    <div className="w-[420px] bg-mission-panel border-l border-mission-border flex flex-col">
+    <div className="w-[420px] bg-mission-panel border-l border-mission-border flex flex-col min-h-0">
       {/* Header */}
-      <div className="h-12 border-b border-mission-border flex items-center justify-between px-4">
+      <div className="h-12 flex-shrink-0 border-b border-mission-border flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Brain className="w-4 h-4 text-mission-accent" />
           <span className="text-xs font-semibold text-gray-300">DECISION SUPPORT</span>
@@ -40,13 +40,15 @@ const RightPanel: React.FC<RightPanelProps> = ({ pipelineData, loading, error })
         </div>
       </div>
 
+      {/* Scrollable content — fixed-height sections would otherwise get squeezed/clipped on small viewports */}
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin flex flex-col">
       {/* Confidence Indicators */}
-      <div className="px-3 py-2 border-b border-mission-border">
+      <div className="px-3 py-2 border-b border-mission-border flex-shrink-0">
         <ConfidenceIndicators pipelineData={pipelineData} />
       </div>
 
       {/* Traffic Intelligence Panel */}
-      <div className="flex-1 p-3 overflow-y-auto scrollbar-thin">
+      <div className="min-h-[220px] p-3 flex-shrink-0">
         {error ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -64,7 +66,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ pipelineData, loading, error })
       </div>
 
       {/* AI Reasoning Panel */}
-      <div className="h-36 border-t border-mission-border p-3">
+      <div className="h-36 flex-shrink-0 border-t border-mission-border p-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-mission-info" />
@@ -87,8 +89,9 @@ const RightPanel: React.FC<RightPanelProps> = ({ pipelineData, loading, error })
       </div>
 
       {/* Decision Intelligence - AI Courses of Action, Decision Score, Mission Log */}
-      <div className="h-[480px] border-t border-mission-border p-3">
+      <div className="h-[480px] flex-shrink-0 border-t border-mission-border p-3">
         <DecisionIntelligence pipelineData={pipelineData} loading={loading} />
+      </div>
       </div>
     </div>
   )

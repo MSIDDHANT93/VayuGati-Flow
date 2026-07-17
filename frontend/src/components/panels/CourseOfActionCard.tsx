@@ -90,10 +90,10 @@ const CourseOfActionCard: React.FC<CourseOfActionCardProps> = ({
     <div className={`rounded border p-2.5 bg-mission-dark ${statusStyle[status]}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-200 truncate">{coa.title}</span>
-            <span className={`text-[10px] font-mono ${tagColor(coa.costTag)}`}>{coa.costTag}</span>
-            <span className={`text-[10px] font-mono ${tagColor(coa.implementationTag)}`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-semibold text-gray-200 truncate min-w-0">{coa.title}</span>
+            <span className={`text-[10px] font-mono flex-shrink-0 ${tagColor(coa.costTag)}`}>{coa.costTag}</span>
+            <span className={`text-[10px] font-mono flex-shrink-0 ${tagColor(coa.implementationTag)}`}>
               {coa.implementationTag}
             </span>
           </div>
@@ -109,14 +109,14 @@ const CourseOfActionCard: React.FC<CourseOfActionCardProps> = ({
         </button>
       </div>
 
-      <div className="flex items-center justify-between mt-2">
-        <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+      <div className="flex items-center justify-between gap-2 mt-2 min-w-0">
+        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 flex-shrink-0">
           CONFIDENCE
           <span className="font-mono text-mission-accent">{(coa.confidence * 100).toFixed(0)}%</span>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 min-w-0">
           EXPECTED
-          <span className="font-mono text-mission-accent">
+          <span className="font-mono text-mission-accent truncate">
             Q{coa.expected.queueDeltaPct.toFixed(0)}% / S+{coa.expected.speedDeltaPct.toFixed(0)}% / R{coa.expected.riskDeltaPct.toFixed(0)}%
           </span>
         </div>
