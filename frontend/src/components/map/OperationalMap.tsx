@@ -107,13 +107,7 @@ const snapToRoad = (
 const trafficRoadFilter = [
   'all',
   ['!has', 'brunnel'],
-  [
-    'match',
-    ['get', 'class'],
-    ['primary', 'secondary', 'tertiary', 'minor', 'service', 'residential', 'living_street'],
-    true,
-    false,
-  ],
+  ['in', 'class', 'primary', 'secondary', 'tertiary', 'minor', 'service', 'residential', 'living_street'],
 ]
 
 const widthByClass = (base: number, ratio: number) => [
@@ -158,6 +152,8 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
   const congestionRef = useRef(0)
   const roadRingsRef = useRef<[number, number][][]>([])
   const visibleLayersRef = useRef(visibleLayers)
+  const pauseRef = useRef(false)
+  const geometrySetupDoneRef = useRef(false)
 
   useEffect(() => {
     visibleLayersRef.current = visibleLayers
@@ -176,6 +172,9 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
     })
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
     mapRef.current = map
+    if (import.meta.env.DEV) {
+      ;(window as any).vayugatiMap = map
+    }
 
     const findRoadLabelLayerId = () => {
       const style = map.getStyle()
@@ -186,6 +185,8 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
       })
       return layer?.id
     }
+
+    let geometryFallback: number | undefined
 
     map.on('load', () => {
       const beforeId = findRoadLabelLayerId()
@@ -206,7 +207,7 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
         },
         paint: {
           'line-color': 'rgba(0, 170, 255, 0.35)',
-          'line-width': roadWidth(14),
+          'line-width': roadWidth(10),
           'line-blur': 12,
           'line-opacity': 0.2,
         },
@@ -225,7 +226,7 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
         },
         paint: {
           'line-color': 'rgba(0, 170, 255, 0.55)',
-          'line-width': roadWidth(6),
+          'line-width': roadWidth(5),
           'line-blur': 4,
           'line-opacity': 0.35,
         },
@@ -308,8 +309,13 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
 
       refreshIntersectionStyles()
 
-      // Wait for all visible tiles before extracting road geometry.
-      map.once('idle', () => {
+      // Extract road geometry once tiles are rendered. The idle event is the
+      // natural trigger, but in headless test environments it can be slow or
+      // stall, so we also fall back to a short timeout.
+      const setupGeometry = () => {
+        if (geometrySetupDoneRef.current) return
+        geometrySetupDoneRef.current = true
+
         const roadFeatures = map.queryRenderedFeatures(undefined, {
           layers: ['traffic-road-core'],
         })
@@ -325,6 +331,7 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
           const snap = snapToRoad(roadRingsRef.current, [camera.lon, camera.lat])
           if (!snap) return
           const el = document.createElement('div')
+          el.className = 'op-map-camera-marker'
           el.style.width = '12px'
           el.style.height = '12px'
           el.style.borderRadius = '50%'
@@ -352,10 +359,31 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
 
         createVehicles()
         if (!prefersReducedMotion()) startVehicleLoop()
-      })
+
+        if (import.meta.env.DEV) {
+          ;(window as any).vayugatiVehicles = vehiclesRef.current
+          ;(window as any).vayugatiPause = (p: boolean) => {
+            pauseRef.current = p
+          }
+          ;(window as any).vayugatiStep = (dt: number) => advanceVehicles(dt)
+        }
+      }
+
+      map.once('idle', setupGeometry)
+
+      const trySetup = () => {
+        if (geometrySetupDoneRef.current) return
+        if (map.loaded()) {
+          setupGeometry()
+        } else {
+          geometryFallback = setTimeout(trySetup, 500)
+        }
+      }
+      geometryFallback = setTimeout(trySetup, 2500)
     })
 
     return () => {
+      clearTimeout(geometryFallback)
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       roadRingsRef.current = []
       map.remove()
@@ -364,57 +392,63 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const advanceVehicles = (dt: number) => {
+    const baseSpeed = 12 * speedFactorRef.current // meters per second
+    vehiclesRef.current.forEach((v) => {
+      const ring = v.ring
+      if (ring.length < 2) return
+      const a = ring[v.pointIndex]
+      const b = ring[v.pointIndex + 1]
+      if (!a || !b) return
+      const segLen = approxDistance(a, b)
+      if (segLen === 0) {
+        v.pointIndex += v.direction
+        if (v.pointIndex >= ring.length - 1) {
+          v.pointIndex = ring.length - 2
+          v.direction = -1
+        }
+        if (v.pointIndex < 0) {
+          v.pointIndex = 0
+          v.direction = 1
+        }
+        return
+      }
+      const delta = (baseSpeed * v.speedJitter * dt) / segLen
+      v.t += delta * v.direction
+      while (v.t > 1 && v.pointIndex < ring.length - 2) {
+        v.t -= 1
+        v.pointIndex += 1
+      }
+      while (v.t < 0 && v.pointIndex > 0) {
+        v.t += 1
+        v.pointIndex -= 1
+      }
+      if (v.pointIndex >= ring.length - 1) {
+        v.pointIndex = ring.length - 2
+        v.t = 1
+        v.direction = -1
+      }
+      if (v.pointIndex < 0) {
+        v.pointIndex = 0
+        v.t = 0
+        v.direction = 1
+      }
+      const a2 = ring[v.pointIndex]
+      const b2 = ring[v.pointIndex + 1]
+      const lon = a2[0] + (b2[0] - a2[0]) * v.t
+      const lat = a2[1] + (b2[1] - a2[1]) * v.t
+      v.marker.setLngLat([lon, lat])
+    })
+  }
+
   const startVehicleLoop = () => {
     let last = performance.now()
     const step = (now: number) => {
       const dt = Math.min((now - last) / 1000, 0.1)
       last = now
-      const baseSpeed = 12 * speedFactorRef.current // meters per second
-      vehiclesRef.current.forEach((v) => {
-        const ring = v.ring
-        if (ring.length < 2) return
-        const a = ring[v.pointIndex]
-        const b = ring[v.pointIndex + 1]
-        if (!a || !b) return
-        const segLen = approxDistance(a, b)
-        if (segLen === 0) {
-          v.pointIndex += v.direction
-          if (v.pointIndex >= ring.length - 1) {
-            v.pointIndex = ring.length - 2
-            v.direction = -1
-          }
-          if (v.pointIndex < 0) {
-            v.pointIndex = 0
-            v.direction = 1
-          }
-          return
-        }
-        const delta = (baseSpeed * v.speedJitter * dt) / segLen
-        v.t += delta * v.direction
-        while (v.t > 1 && v.pointIndex < ring.length - 2) {
-          v.t -= 1
-          v.pointIndex += 1
-        }
-        while (v.t < 0 && v.pointIndex > 0) {
-          v.t += 1
-          v.pointIndex -= 1
-        }
-        if (v.pointIndex >= ring.length - 1) {
-          v.pointIndex = ring.length - 2
-          v.t = 1
-          v.direction = -1
-        }
-        if (v.pointIndex < 0) {
-          v.pointIndex = 0
-          v.t = 0
-          v.direction = 1
-        }
-        const a2 = ring[v.pointIndex]
-        const b2 = ring[v.pointIndex + 1]
-        const lon = a2[0] + (b2[0] - a2[0]) * v.t
-        const lat = a2[1] + (b2[1] - a2[1]) * v.t
-        v.marker.setLngLat([lon, lat])
-      })
+      if (!pauseRef.current) {
+        advanceVehicles(dt)
+      }
       rafRef.current = requestAnimationFrame(step)
     }
     rafRef.current = requestAnimationFrame(step)
@@ -429,6 +463,7 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
       if (ring.length < 2) continue
       const pointIndex = Math.floor(Math.random() * (ring.length - 1))
       const el = document.createElement('div')
+      el.className = 'op-map-vehicle-marker'
       el.style.width = '5px'
       el.style.height = '5px'
       el.style.borderRadius = '50%'
