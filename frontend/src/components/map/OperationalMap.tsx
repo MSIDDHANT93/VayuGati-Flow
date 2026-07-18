@@ -22,11 +22,12 @@ interface OperationalMapProps {
   visibleLayers: Set<MapLayerId>
 }
 
-interface AnimatedVehicle {
-  marker: maplibregl.Marker
-  edge: number
+interface Vehicle {
+  ring: [number, number][]
+  pointIndex: number
   t: number
   direction: 1 | -1
+  marker: maplibregl.Marker
   speedJitter: number
 }
 
@@ -69,52 +70,34 @@ const nearestPointOnSegment = (p: [number, number], a: [number, number], b: [num
   return { point: [ax + t * dx, ay + t * dy] as [number, number], t }
 }
 
-const collectRoadEdges = (features: GeoJSON.Feature[]): Array<{ from: [number, number]; to: [number, number] }> => {
-  const edges: Array<{ from: [number, number]; to: [number, number] }> = []
+const extractRings = (features: GeoJSON.Feature[]): [number, number][][] => {
+  const rings: [number, number][][] = []
   for (const f of features) {
     const geom = f.geometry
     if (!geom) continue
     if (geom.type === 'LineString') {
-      const coords = geom.coordinates as [number, number][]
-      for (let i = 0; i < coords.length - 1; i++) {
-        edges.push({ from: coords[i], to: coords[i + 1] })
-      }
+      rings.push(geom.coordinates as [number, number][])
     } else if (geom.type === 'MultiLineString') {
       const lines = geom.coordinates as [number, number][][]
-      for (const line of lines) {
-        for (let i = 0; i < line.length - 1; i++) {
-          edges.push({ from: line[i], to: line[i + 1] })
-        }
-      }
+      for (const line of lines) rings.push(line)
     }
   }
-  return edges
+  return rings
 }
 
 const snapToRoad = (
-  features: GeoJSON.Feature[],
+  rings: [number, number][][],
   target: [number, number]
 ): { point: [number, number]; heading: number } | null => {
   let best: { point: [number, number]; heading: number; dist: number } | null = null
-  for (const f of features) {
-    const geom = f.geometry
-    if (!geom) continue
-    const rings: [number, number][][] =
-      geom.type === 'LineString'
-        ? [geom.coordinates as [number, number][]]
-        : geom.type === 'MultiLineString'
-        ? (geom.coordinates as [number, number][][])
-        : []
-    for (const coords of rings) {
-      for (let i = 0; i < coords.length - 1; i++) {
-        const a = coords[i]
-        const b = coords[i + 1]
-        const { point } = nearestPointOnSegment(target, a, b)
-        const dist = approxDistance(point, target)
-        if (!best || dist < best.dist) {
-          const heading = bearing(a, b)
-          best = { point, dist, heading }
-        }
+  for (const ring of rings) {
+    for (let i = 0; i < ring.length - 1; i++) {
+      const a = ring[i]
+      const b = ring[i + 1]
+      const { point } = nearestPointOnSegment(target, a, b)
+      const dist = approxDistance(point, target)
+      if (!best || dist < best.dist) {
+        best = { point, dist, heading: bearing(a, b) }
       }
     }
   }
@@ -133,14 +116,28 @@ const trafficRoadFilter = [
   ],
 ]
 
-const roadWidth = (widthAt13: number, widthAt17: number) => [
+const widthByClass = (base: number, ratio: number) => [
+  'match',
+  ['get', 'class'],
+  ['primary', 'trunk', 'motorway'],
+  base * ratio * ratio * ratio,
+  ['secondary', 'tertiary'],
+  base * ratio * ratio,
+  ['minor', 'residential', 'living_street'],
+  base * ratio,
+  ['service', 'path', 'track'],
+  base,
+  base,
+]
+
+const roadWidth = (base: number) => [
   'interpolate',
   ['linear'],
   ['zoom'],
   13,
-  widthAt13,
+  widthByClass(base, 0.7),
   17,
-  widthAt17,
+  widthByClass(base, 1.4),
 ]
 
 const OperationalMap: React.FC<OperationalMapProps> = ({
@@ -154,12 +151,12 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
   const markersRef = useRef<Record<string, maplibregl.Marker>>({})
   const cameraMarkersRef = useRef<maplibregl.Marker[]>([])
   const incidentMarkersRef = useRef<maplibregl.Marker[]>([])
-  const vehiclesRef = useRef<AnimatedVehicle[]>([])
+  const vehiclesRef = useRef<Vehicle[]>([])
   const queueRingRef = useRef<maplibregl.Marker | null>(null)
   const rafRef = useRef<number | null>(null)
   const speedFactorRef = useRef(1)
   const congestionRef = useRef(0)
-  const roadEdgesRef = useRef<Array<{ from: [number, number]; to: [number, number] }>>([])
+  const roadRingsRef = useRef<[number, number][][]>([])
   const visibleLayersRef = useRef(visibleLayers)
 
   useEffect(() => {
@@ -180,10 +177,23 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
     mapRef.current = map
 
+    const findRoadLabelLayerId = () => {
+      const style = map.getStyle()
+      const layer = style.layers?.find((l: any) => {
+        if (l.id.startsWith('roadname')) return true
+        if (l.id.startsWith('road_label')) return true
+        return l['source-layer'] === 'transportation_name'
+      })
+      return layer?.id
+    }
+
     map.on('load', () => {
-      // Traffic highlight layers use the same vector tile source as the basemap.
-      // This guarantees every highlighted segment follows an actual road centerline.
-      map.addLayer({
+      const beforeId = findRoadLabelLayerId()
+
+      // Traffic highlight layers use the same vector tile source and source-layer
+      // as the basemap road network. They are inserted just before road labels so
+      // the highlight sits on top of the road fill/casing but under labels.
+      const glowLayer = {
         id: 'traffic-road-glow',
         type: 'line',
         source: 'carto',
@@ -195,14 +205,14 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
           visibility: isVisible('traffic') ? 'visible' : 'none',
         },
         paint: {
-          'line-color': 'rgba(0, 170, 255, 0.45)',
-          'line-width': roadWidth(10, 24),
-          'line-blur': 10,
-          'line-opacity': 0.25,
+          'line-color': 'rgba(0, 170, 255, 0.35)',
+          'line-width': roadWidth(14),
+          'line-blur': 12,
+          'line-opacity': 0.2,
         },
-      } as any)
+      } as any
 
-      map.addLayer({
+      const softLayer = {
         id: 'traffic-road-soft',
         type: 'line',
         source: 'carto',
@@ -214,14 +224,14 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
           visibility: isVisible('traffic') ? 'visible' : 'none',
         },
         paint: {
-          'line-color': 'rgba(0, 170, 255, 0.6)',
-          'line-width': roadWidth(4, 8),
-          'line-blur': 3,
-          'line-opacity': 0.4,
+          'line-color': 'rgba(0, 170, 255, 0.55)',
+          'line-width': roadWidth(6),
+          'line-blur': 4,
+          'line-opacity': 0.35,
         },
-      } as any)
+      } as any
 
-      map.addLayer({
+      const coreLayer = {
         id: 'traffic-road-core',
         type: 'line',
         source: 'carto',
@@ -234,10 +244,20 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
         },
         paint: {
           'line-color': '#00ff88',
-          'line-width': roadWidth(1.5, 3.5),
-          'line-opacity': 0.85,
+          'line-width': roadWidth(2),
+          'line-opacity': 0.8,
         },
-      } as any)
+      } as any
+
+      if (beforeId) {
+        map.addLayer(glowLayer, beforeId)
+        map.addLayer(softLayer, beforeId)
+        map.addLayer(coreLayer, beforeId)
+      } else {
+        map.addLayer(glowLayer)
+        map.addLayer(softLayer)
+        map.addLayer(coreLayer)
+      }
 
       // Intersection markers
       MOCK_INTERSECTIONS.forEach((intersection) => {
@@ -288,7 +308,7 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
 
       refreshIntersectionStyles()
 
-      // Wait for all visible tiles before extracting road geometry for animation.
+      // Wait for all visible tiles before extracting road geometry.
       map.once('idle', () => {
         const roadFeatures = map.queryRenderedFeatures(undefined, {
           layers: ['traffic-road-core'],
@@ -298,11 +318,11 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
           geometry: f.geometry,
           properties: f.properties || {},
         }) as unknown as GeoJSON.Feature)
-        roadEdgesRef.current = collectRoadEdges(combined)
+        roadRingsRef.current = extractRings(combined)
 
         // Snap cameras to nearest road and align their heading.
         MOCK_CAMERAS.forEach((camera) => {
-          const snap = snapToRoad(combined, [camera.lon, camera.lat])
+          const snap = snapToRoad(roadRingsRef.current, [camera.lon, camera.lat])
           if (!snap) return
           const el = document.createElement('div')
           el.style.width = '12px'
@@ -337,7 +357,7 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
 
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
-      roadEdgesRef.current = []
+      roadRingsRef.current = []
       map.remove()
       mapRef.current = null
     }
@@ -349,25 +369,50 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
     const step = (now: number) => {
       const dt = Math.min((now - last) / 1000, 0.1)
       last = now
-      const edges = roadEdgesRef.current
-      if (edges.length === 0) {
-        rafRef.current = requestAnimationFrame(step)
-        return
-      }
-      const base = 0.12 * speedFactorRef.current
+      const baseSpeed = 12 * speedFactorRef.current // meters per second
       vehiclesRef.current.forEach((v) => {
-        const seg = edges[v.edge]
-        if (!seg) return
-        v.t += base * v.speedJitter * dt * v.direction
-        if (v.t > 1) {
+        const ring = v.ring
+        if (ring.length < 2) return
+        const a = ring[v.pointIndex]
+        const b = ring[v.pointIndex + 1]
+        if (!a || !b) return
+        const segLen = approxDistance(a, b)
+        if (segLen === 0) {
+          v.pointIndex += v.direction
+          if (v.pointIndex >= ring.length - 1) {
+            v.pointIndex = ring.length - 2
+            v.direction = -1
+          }
+          if (v.pointIndex < 0) {
+            v.pointIndex = 0
+            v.direction = 1
+          }
+          return
+        }
+        const delta = (baseSpeed * v.speedJitter * dt) / segLen
+        v.t += delta * v.direction
+        while (v.t > 1 && v.pointIndex < ring.length - 2) {
+          v.t -= 1
+          v.pointIndex += 1
+        }
+        while (v.t < 0 && v.pointIndex > 0) {
+          v.t += 1
+          v.pointIndex -= 1
+        }
+        if (v.pointIndex >= ring.length - 1) {
+          v.pointIndex = ring.length - 2
           v.t = 1
           v.direction = -1
-        } else if (v.t < 0) {
+        }
+        if (v.pointIndex < 0) {
+          v.pointIndex = 0
           v.t = 0
           v.direction = 1
         }
-        const lon = seg.from[0] + (seg.to[0] - seg.from[0]) * v.t
-        const lat = seg.from[1] + (seg.to[1] - seg.from[1]) * v.t
+        const a2 = ring[v.pointIndex]
+        const b2 = ring[v.pointIndex + 1]
+        const lon = a2[0] + (b2[0] - a2[0]) * v.t
+        const lat = a2[1] + (b2[1] - a2[1]) * v.t
         v.marker.setLngLat([lon, lat])
       })
       rafRef.current = requestAnimationFrame(step)
@@ -377,11 +422,12 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
 
   const createVehicles = () => {
     const map = mapRef.current
-    if (!map) return
-    const edges = roadEdgesRef.current
-    const count = Math.min(80, edges.length)
-    for (let i = 0; i < count; i++) {
-      const edge = edges[i]
+    const rings = roadRingsRef.current
+    if (!map || rings.length === 0) return
+    for (let i = 0; i < 80; i++) {
+      const ring = rings[i % rings.length]
+      if (ring.length < 2) continue
+      const pointIndex = Math.floor(Math.random() * (ring.length - 1))
       const el = document.createElement('div')
       el.style.width = '5px'
       el.style.height = '5px'
@@ -391,14 +437,15 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
       el.style.pointerEvents = 'none'
       el.style.transition = 'background 600ms ease, box-shadow 600ms ease'
       const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat(edge.from)
+        .setLngLat(ring[pointIndex])
         .addTo(map)
       marker.getElement().style.display = isVisible('traffic') ? 'block' : 'none'
       vehiclesRef.current.push({
         marker,
-        edge: i,
-        t: ((i % 5) + 0.5) / 5,
-        direction: i % 2 === 0 ? 1 : -1,
+        ring,
+        pointIndex,
+        t: Math.random(),
+        direction: Math.random() > 0.5 ? 1 : -1,
         speedJitter: 0.7 + Math.random() * 0.6,
       })
     }
@@ -432,20 +479,20 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
           id,
           'line-color',
           color === '#ff4444'
-            ? 'rgba(255, 68, 68, 0.45)'
+            ? 'rgba(255, 68, 68, 0.35)'
             : color === '#ffaa00'
-            ? 'rgba(255, 170, 0, 0.45)'
-            : 'rgba(0, 170, 255, 0.45)'
+            ? 'rgba(255, 170, 0, 0.35)'
+            : 'rgba(0, 170, 255, 0.35)'
         )
       } else if (id === 'traffic-road-soft') {
         map.setPaintProperty(
           id,
           'line-color',
           color === '#ff4444'
-            ? 'rgba(255, 68, 68, 0.6)'
+            ? 'rgba(255, 68, 68, 0.55)'
             : color === '#ffaa00'
-            ? 'rgba(255, 170, 0, 0.6)'
-            : 'rgba(0, 170, 255, 0.6)'
+            ? 'rgba(255, 170, 0, 0.55)'
+            : 'rgba(0, 170, 255, 0.55)'
         )
       } else {
         map.setPaintProperty(id, 'line-color', color)
