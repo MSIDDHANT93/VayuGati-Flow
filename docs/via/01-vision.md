@@ -40,7 +40,19 @@ The VayuGati intelligence system is built on the premise that decision support m
 
 Every recommendation produced by the system must be accompanied by the evidence that supports it. The system may use probabilistic or learned models, but it must never present a recommendation as authoritative without indicating the basis for that recommendation.
 
-## 4. Design Principles
+## 4. Architectural Axioms
+
+The intelligence architecture is built on a small set of axioms: assumptions that are taken to be true and that constrain every subsequent design decision. These are not implementation rules; they are the foundational commitments that all later chapters must preserve.
+
+| Axiom | Explanation |
+|---|---|
+| **Cities are dynamic systems, not static infrastructure.** | Urban environments change continuously. Traffic, weather, events, and human behavior alter the operating context at all times. The architecture must reason over a living, changing model rather than a fixed description. |
+| **Every recommendation must be traceable to observable evidence.** | An intelligence system that cannot show its work is not a decision-support system. Every conclusion must be linked to observations, models, and assumptions that can be inspected. |
+| **Intelligence is an ongoing reasoning process, not a single prediction.** | The system maintains hypotheses, updates them as new evidence arrives, and revises its confidence. A recommendation is a moment in a continuous reasoning loop, not a one-time inference. |
+| **Uncertainty must be explicitly represented, not hidden.** | Operators must see what the system knows, what it assumes, and where its confidence is low. Hiding uncertainty erodes trust and produces brittle decisions. |
+| **Human operators retain final decision authority.** | The architecture produces recommendations, warnings, and evidence. It does not command infrastructure, override policy, or remove human accountability. |
+
+## 5. Design Principles
 
 The following principles govern the design of the intelligence architecture. They are non-negotiable in the sense that no implementation detail may override them without explicit architectural review.
 
@@ -57,7 +69,7 @@ The following principles govern the design of the intelligence architecture. The
 | **Continuous learning** | The system must be able to incorporate feedback and outcomes without requiring a full redeployment or manual re-engineering. |
 | **Security and privacy by design** | Access to observations, reasoning, and decisions is governed by role-based policies, and sensitive data is minimized at the point of ingestion. |
 
-## 5. Scope of Intelligence
+## 6. Scope of Intelligence
 
 The immediate scope of VayuGati is traffic operations at a single intersection and, progressively, across a network of intersections. The intelligence architecture is intentionally not limited to traffic. It should be able to support, as examples, the following adjacent urban domains when those capabilities are added in the future:
 
@@ -71,7 +83,7 @@ The immediate scope of VayuGati is traffic operations at a single intersection a
 
 These are illustrative domains. They are not committed roadmap items. The architecture must remain domain-agnostic enough to accommodate them without requiring the reconstruction of the intelligence layer.
 
-## 6. Intelligence Lifecycle
+## 7. Intelligence Lifecycle
 
 The conceptual intelligence lifecycle consists of the following stages. Each stage is a distinct responsibility in the architecture, even if implementation later combines some stages for efficiency.
 
@@ -99,7 +111,7 @@ Learn
 - **Explain.** Present the basis for recommendations in operator-appropriate terms, including evidence, uncertainty, and trade-offs.
 - **Learn.** Update models, confidence estimates, and decision policies from observed outcomes and explicit operator feedback.
 
-## 7. Success Criteria
+## 8. Success Criteria
 
 The quality of the intelligence system should be evaluated along the following dimensions:
 
@@ -113,7 +125,19 @@ The quality of the intelligence system should be evaluated along the following d
 | **User trust** | The extent to which operators rely on and act on the system's output, measured by override rates, acceptance rates, and qualitative feedback. |
 | **Operational impact** | The measurable improvement in traffic, safety, or other urban outcomes attributable to decisions supported by the platform. |
 
-## 8. Out of Scope
+## 9. Intelligence Boundaries
+
+The following boundaries define what the intelligence architecture intentionally does not do. They are architectural constraints, not missing features. They protect the system from overreach, preserve accountability, and maintain the boundary between decision support and autonomous action.
+
+| Boundary | Rationale |
+|---|---|
+| **Does not autonomously control city infrastructure.** | Actuation of signals, barriers, vehicles, or other physical systems is a separate authority. The system produces recommendations; execution remains under operational control. |
+| **Does not replace traffic engineers or public officials.** | Domain expertise and accountability rest with humans. The system augments judgment, it does not substitute for it. |
+| **Does not make recommendations without supporting evidence.** | A recommendation that cannot be justified is not a recommendation; it is speculation. This boundary enforces the evidence-before-recommendation principle. |
+| **Does not optimize efficiency at the expense of safety.** | Safety, equity, and policy constraints take precedence over throughput or latency. The system must expose these trade-offs, not silently override them. |
+| **Does not remove human oversight by default.** | High-impact recommendations require operator review and approval unless a specific policy explicitly delegates authority. Oversight is the default condition. |
+
+## 10. Out of Scope
 
 This chapter intentionally does not define:
 
@@ -126,7 +150,7 @@ This chapter intentionally does not define:
 
 These topics are addressed in later VIA chapters and in the PRD, system architecture, and engineering documentation.
 
-## 9. Cross References
+## 11. Cross References
 
 - Product requirements are defined in the PRD at `docs/prd/`.
 - The intelligence lifecycle depends on the model of the urban environment defined in [02-urban-knowledge-graph](02-urban-knowledge-graph.md).
@@ -134,3 +158,7 @@ These topics are addressed in later VIA chapters and in the PRD, system architec
 - Causal reasoning is covered in [04-root-cause-engine](04-root-cause-engine.md).
 - Decision-making and Course of Action generation are defined in [07-decision-intelligence](07-decision-intelligence.md).
 - Memory and state retention are described in [06-operational-memory](06-operational-memory.md).
+
+## 12. North Star
+
+The enduring mission of the VayuGati intelligence architecture is to make urban operations reasoned, transparent, and continuously improvable: a system in which every recommendation is grounded in observable evidence, every decision preserves human accountability, and every outcome feeds back into a learning loop that makes the city more resilient, efficient, and humane. Over the coming decade, VayuGati will move urban operations from reactive management toward evidence-based, explainable, continuously improving decision intelligence.
