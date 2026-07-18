@@ -18,13 +18,19 @@ const prefersReducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 // Road segments (lon/lat endpoint pairs) used for vehicle animation.
+// Each corridor polyline is flattened into its consecutive edges so
+// vehicles follow every leg of the street-aligned path.
 const ROAD_SEGMENTS: Array<{ from: [number, number]; to: [number, number] }> =
-  ROAD_NETWORK.features.map((f) => {
+  ROAD_NETWORK.features.flatMap((f) => {
     const coords = (f.geometry as GeoJSON.LineString).coordinates
-    return {
-      from: [coords[0][0], coords[0][1]],
-      to: [coords[1][0], coords[1][1]],
+    const edges: Array<{ from: [number, number]; to: [number, number] }> = []
+    for (let i = 0; i < coords.length - 1; i++) {
+      edges.push({
+        from: [coords[i][0], coords[i][1]],
+        to: [coords[i + 1][0], coords[i + 1][1]],
+      })
     }
+    return edges
   })
 
 interface AnimatedVehicle {
@@ -82,14 +88,27 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
 
     map.on('load', () => {
       map.addSource('road-network', { type: 'geojson', data: ROAD_NETWORK })
+      // Corridor casing + line — rendered like an operational route overlay
+      map.addLayer({
+        id: 'road-network-casing',
+        type: 'line',
+        source: 'road-network',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#003a5c',
+          'line-width': 7,
+          'line-opacity': 0.5,
+        },
+      })
       map.addLayer({
         id: 'road-network-line',
         type: 'line',
         source: 'road-network',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: {
           'line-color': '#00aaff',
-          'line-width': 2,
-          'line-opacity': 0.35,
+          'line-width': 2.5,
+          'line-opacity': 0.55,
         },
       })
 
@@ -149,7 +168,7 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
       // Animated vehicles distributed along the road network
       if (!prefersReducedMotion()) {
         ROAD_SEGMENTS.forEach((_, segIdx) => {
-          const perSegment = 2
+          const perSegment = segIdx % 2 === 0 ? 2 : 1
           for (let v = 0; v < perSegment; v++) {
             const el = document.createElement('div')
             el.className = 'op-map-vehicle-dot'
@@ -279,12 +298,10 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
       m.getElement().style.display = visibleLayers.has('incidents') ? 'block' : 'none'
     })
     const map = mapRef.current
-    if (map && map.getLayer('road-network-line')) {
-      map.setLayoutProperty(
-        'road-network-line',
-        'visibility',
-        visibleLayers.has('traffic') ? 'visible' : 'none'
-      )
+    if (map) {
+      const vis = visibleLayers.has('traffic') ? 'visible' : 'none'
+      if (map.getLayer('road-network-line')) map.setLayoutProperty('road-network-line', 'visibility', vis)
+      if (map.getLayer('road-network-casing')) map.setLayoutProperty('road-network-casing', 'visibility', vis)
     }
   }
 

@@ -61,7 +61,11 @@ export const MOCK_INCIDENTS: MapIncident[] = [
   },
 ]
 
-// Simple GeoJSON road network connecting intersections (grid pattern)
+// GeoJSON road network connecting intersections. Instead of straight
+// diagonal lines (which cut across city blocks on the basemap), each
+// corridor is routed as an L-shaped path following the street grid:
+// east-west leg first, then north-south leg. This keeps animated
+// vehicles visually aligned with plausible street geometry.
 export const ROAD_NETWORK: GeoJSON.FeatureCollection = {
   type: 'FeatureCollection',
   features: [
@@ -75,15 +79,20 @@ export const ROAD_NETWORK: GeoJSON.FeatureCollection = {
   ].map(([fromId, toId]) => {
     const from = MOCK_INTERSECTIONS.find((i) => i.id === fromId)!
     const to = MOCK_INTERSECTIONS.find((i) => i.id === toId)!
+    const coordinates: [number, number][] = [[from.lon, from.lat]]
+    // Insert a corner waypoint unless the nodes are already roughly aligned
+    const alignedNS = Math.abs(from.lon - to.lon) < 0.0008
+    const alignedEW = Math.abs(from.lat - to.lat) < 0.0008
+    if (!alignedNS && !alignedEW) {
+      coordinates.push([to.lon, from.lat])
+    }
+    coordinates.push([to.lon, to.lat])
     return {
       type: 'Feature',
       properties: { fromId, toId },
       geometry: {
         type: 'LineString',
-        coordinates: [
-          [from.lon, from.lat],
-          [to.lon, to.lat],
-        ],
+        coordinates,
       },
     } as GeoJSON.Feature
   }),

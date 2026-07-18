@@ -1,10 +1,8 @@
 import React, { Suspense, lazy, useState } from 'react'
-import { Target, AlertTriangle, Activity } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import { PipelineResponse } from '../../api/pipeline'
 import LayerControls from '../map/LayerControls'
-import IntersectionPanel from '../map/IntersectionPanel'
-import { MOCK_INTERSECTIONS, MOCK_CAMERAS, MAP_LAYERS, MapLayerId } from '../../data/gisData'
-import useAnimatedValue from '../../lib/useAnimatedValue'
+import { MAP_LAYERS, MapLayerId } from '../../data/gisData'
 
 // Code-split the MapLibre-backed map: it is the single largest dependency in
 // the bundle, so defer loading it until MainArea actually mounts.
@@ -21,9 +19,6 @@ const defaultLayers = new Set<MapLayerId>(
 )
 
 const MainArea: React.FC<MainAreaProps> = ({ pipelineData, loading, error }) => {
-  const [selectedIntersectionId, setSelectedIntersectionId] = useState(
-    pipelineData?.intersection_id || 'INT-001'
-  )
   const [visibleLayers, setVisibleLayers] = useState<Set<MapLayerId>>(defaultLayers)
 
   const toggleLayer = (id: MapLayerId) => {
@@ -35,16 +30,8 @@ const MainArea: React.FC<MainAreaProps> = ({ pipelineData, loading, error }) => 
     })
   }
 
-  const onlineCameras = MOCK_CAMERAS.filter((c) => c.status === 'online').length
-
-  // Smoothly interpolate live metrics so scenario changes ease rather than jump
-  const animQueue = useAnimatedValue(pipelineData?.queue_length_meters ?? 0)
-  const animSpeed = useAnimatedValue(pipelineData?.average_speed_kmh ?? 0)
-  const animRisk = useAnimatedValue(pipelineData?.risk_score ?? 0)
-
   return (
-    <div className="flex-1 bg-mission-dark relative overflow-hidden">
-      {/* Operational Map */}
+    <main className="relative bg-mission-dark overflow-hidden h-full w-full">
       <div className="absolute inset-0">
         <Suspense
           fallback={
@@ -55,106 +42,43 @@ const MainArea: React.FC<MainAreaProps> = ({ pipelineData, loading, error }) => 
         >
           <OperationalMap
             pipelineData={pipelineData}
-            selectedIntersectionId={selectedIntersectionId}
-            onSelectIntersection={setSelectedIntersectionId}
+            selectedIntersectionId={pipelineData?.intersection_id || 'INT-001'}
+            onSelectIntersection={() => {}}
             visibleLayers={visibleLayers}
           />
         </Suspense>
       </div>
 
-      {/* Top Left - Operational Status */}
-      <div className="absolute top-4 left-4 space-y-2 pointer-events-none">
-        <div className="bg-mission-panel/95 border border-mission-border rounded p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Target className="w-4 h-4 text-mission-accent" />
-            <span className="text-xs font-semibold text-gray-300">OPERATIONAL VIEW</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="text-gray-500">INTERSECTIONS</div>
-            <div className="text-gray-300 font-mono">{MOCK_INTERSECTIONS.length} ACTIVE</div>
-            <div className="text-gray-500">CAMERAS</div>
-            <div className="text-gray-300 font-mono">{onlineCameras} ONLINE</div>
-            <div className="text-gray-500">ALERTS</div>
-            <div className={`font-mono ${pipelineData && pipelineData.risk_score > 0.5 ? 'text-mission-danger' : 'text-gray-300'}`}>
-              {pipelineData && pipelineData.risk_score > 0.5 ? '1 ACTIVE' : '0 ACTIVE'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Top Right - Layer Controls */}
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-3 right-3 z-10">
         <LayerControls visibleLayers={visibleLayers} onToggle={toggleLayer} />
       </div>
 
-      {/* Bottom Left - Current Situation */}
-      <div className="absolute bottom-4 left-4 pointer-events-none">
-        <div className="bg-mission-panel/95 border border-mission-border rounded p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Activity className="w-4 h-4 text-mission-warning" />
-            <span className="text-xs font-semibold text-gray-300">CURRENT SITUATION</span>
+      {pipelineData && pipelineData.risk_score > 0.5 && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-mission-danger/15 border border-mission-danger rounded px-3 py-1.5 pointer-events-none">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-mission-danger" />
+            <span className="text-[10px] font-semibold text-mission-danger">
+              ELEVATED RISK — {pipelineData.intersection_id}
+            </span>
           </div>
-          {pipelineData ? (
-            <div className="space-y-1 text-xs">
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-500">Queue Length</span>
-                <span className="text-gray-300 font-mono">{animQueue.toFixed(1)}m</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-500">Avg Speed</span>
-                <span className="text-gray-300 font-mono">{animSpeed.toFixed(1)} km/h</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-500">Risk Score</span>
-                <span className={`font-mono ${pipelineData.risk_score > 0.5 ? 'text-mission-danger' : 'text-mission-accent'}`}>
-                  {animRisk.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="text-xs text-gray-500">Loading situation data...</div>
-          )}
         </div>
-      </div>
+      )}
 
-      {/* Bottom Right - Intersection Panel (interactive operational object) */}
-      <div className="absolute bottom-4 right-4">
-        <IntersectionPanel
-          intersectionId={selectedIntersectionId}
-          pipelineData={pipelineData}
-          onClose={() => setSelectedIntersectionId(pipelineData?.intersection_id || 'INT-001')}
-        />
-      </div>
-
-      {/* Loading Overlay */}
       {loading && !error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-mission-black/40 pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center bg-mission-black/40 pointer-events-none z-20">
           <span className="text-xs font-mono text-mission-accent animate-pulse">SYNCING OPERATIONAL DATA...</span>
         </div>
       )}
 
-      {/* Error Overlay - operational data feed unavailable */}
       {error && !loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-mission-black/60">
+        <div className="absolute inset-0 flex items-center justify-center bg-mission-black/60 z-20">
           <div className="flex items-center gap-2 bg-mission-panel border border-mission-danger rounded px-4 py-2">
             <AlertTriangle className="w-4 h-4 text-mission-danger" />
             <span className="text-xs font-semibold text-mission-danger">OPERATIONAL FEED UNAVAILABLE — {error}</span>
           </div>
         </div>
       )}
-
-      {/* Active Alert Banner */}
-      {pipelineData && pipelineData.risk_score > 0.5 && (
-        <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 bg-mission-danger/20 border border-mission-danger rounded px-4 py-2 pointer-events-none">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-mission-danger" />
-            <span className="text-xs font-semibold text-mission-danger">
-              ELEVATED RISK DETECTED - INTERSECTION {pipelineData.intersection_id}
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
+    </main>
   )
 }
 
