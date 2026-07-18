@@ -200,18 +200,26 @@ For the complete documentation index, see [`docs/README.md`](docs/README.md).
 
 - [System Overview](docs/SYSTEM_OVERVIEW.md) - Complete architecture and data flow
 - [PRD sections](docs/prd/) - Product requirements and strategic documentation
-- [Algorithms](docs/ALGORITHMS.md) - Deterministic traffic analysis algorithms
+- [VIA](docs/via/) - VayuGati Intelligence Architecture
+- [Testing](docs/testing/playwright.md) - Playwright visual testing setup
 
 ---
 
 # 🧪 Testing
 
+Backend:
 ```bash
 cd backend
 pytest tests/ -v
 ```
 
-Test Coverage: 97 tests passing
+Frontend (Chromium):
+```bash
+cd frontend
+npm run test:e2e
+```
+
+Test Coverage: 149 backend tests passing, 10 Playwright suites passing
 
 ---
 

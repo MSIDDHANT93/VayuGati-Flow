@@ -173,7 +173,7 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
     mapRef.current = map
     if (import.meta.env.DEV) {
-      ;(window as any).vayugatiMap = map
+      (window as any).vayugatiMap = map;
     }
 
     const findRoadLabelLayerId = () => {
@@ -361,11 +361,11 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
         if (!prefersReducedMotion()) startVehicleLoop()
 
         if (import.meta.env.DEV) {
-          ;(window as any).vayugatiVehicles = vehiclesRef.current
-          ;(window as any).vayugatiPause = (p: boolean) => {
+          (window as any).vayugatiVehicles = vehiclesRef.current;
+          (window as any).vayugatiPause = (p: boolean) => {
             pauseRef.current = p
-          }
-          ;(window as any).vayugatiStep = (dt: number) => advanceVehicles(dt)
+          };
+          (window as any).vayugatiStep = (dt: number) => advanceVehicles(dt);
         }
       }
 

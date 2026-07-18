@@ -27,25 +27,41 @@ docs/
 ├── adr/                         # Architecture Decision Records
 │   ├── README.md
 │   └── ADR-NNN-*.md (future)
-└── prd/                         # Formal PRD sections
+├── prd/                         # Formal PRD sections
+│   ├── 00-document-control.md
+│   ├── 01-executive-overview.md
+│   ├── 02-problem-domain.md
+│   ├── 03-product-strategy.md
+│   ├── 04-functional-requirements.md
+│   ├── 05-ai-architecture.md
+│   ├── 06-system-architecture.md
+│   ├── 07-digital-twin.md
+│   ├── 08-data-model.md
+│   ├── 09-api-specification.md
+│   ├── 10-user-experience.md
+│   ├── 11-security.md
+│   ├── 12-infrastructure.md
+│   ├── 13-deployment.md
+│   ├── 14-commercial-strategy.md
+│   ├── 15-roadmap.md
+│   ├── 16-risk-analysis.md
+│   └── appendix.md
+├── testing/                     # Testing documentation and runbooks
+│   └── playwright.md
+└── via/                         # VayuGati Intelligence Architecture
     ├── 00-document-control.md
-    ├── 01-executive-overview.md
-    ├── 02-problem-domain.md
-    ├── 03-product-strategy.md
-    ├── 04-functional-requirements.md
-    ├── 05-ai-architecture.md
-    ├── 06-system-architecture.md
-    ├── 07-digital-twin.md
-    ├── 08-data-model.md
-    ├── 09-api-specification.md
-    ├── 10-user-experience.md
-    ├── 11-security.md
-    ├── 12-infrastructure.md
-    ├── 13-deployment.md
-    ├── 14-commercial-strategy.md
-    ├── 15-roadmap.md
-    ├── 16-risk-analysis.md
-    └── appendix.md
+    ├── 01-vision.md
+    ├── 02-urban-knowledge-graph.md
+    ├── 03-agent-architecture.md
+    ├── 04-root-cause-engine.md
+    ├── 05-simulation-engine.md
+    ├── 06-operational-memory.md
+    ├── 07-decision-intelligence.md
+    ├── 08-explainability.md
+    ├── 09-plugin-architecture.md
+    ├── 10-learning-loop.md
+    ├── 11-ai-commander.md
+    └── README.md
 `
 
 ## Navigation Guide

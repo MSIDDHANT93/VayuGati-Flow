@@ -20,6 +20,7 @@ function App() {
 
   useEffect(() => {
     loadPipelineData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentScenario])
 
   useEffect(() => {
@@ -31,6 +32,7 @@ function App() {
         level: pipelineData.risk_score > 0.5 ? 'warning' : 'success',
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pipelineData])
 
   const loadPipelineData = async () => {
@@ -50,7 +52,6 @@ function App() {
       }
     } catch (err) {
       setError('Error connecting to backend')
-      console.error('Pipeline API error:', err)
     } finally {
       setLoading(false)
     }
