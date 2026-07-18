@@ -5,7 +5,6 @@ import {
   MOCK_INTERSECTIONS,
   MOCK_CAMERAS,
   MOCK_INCIDENTS,
-  ROAD_NETWORK,
   MAP_CENTER,
   MapLayerId,
 } from '../../data/gisData'
@@ -14,32 +13,7 @@ import { PipelineResponse } from '../../api/pipeline'
 const DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
 const prefersReducedMotion = () =>
-  typeof window !== 'undefined' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-// Road segments (lon/lat endpoint pairs) used for vehicle animation.
-// Each corridor polyline is flattened into its consecutive edges so
-// vehicles follow every leg of the street-aligned path.
-const ROAD_SEGMENTS: Array<{ from: [number, number]; to: [number, number] }> =
-  ROAD_NETWORK.features.flatMap((f) => {
-    const coords = (f.geometry as GeoJSON.LineString).coordinates
-    const edges: Array<{ from: [number, number]; to: [number, number] }> = []
-    for (let i = 0; i < coords.length - 1; i++) {
-      edges.push({
-        from: [coords[i][0], coords[i][1]],
-        to: [coords[i + 1][0], coords[i + 1][1]],
-      })
-    }
-    return edges
-  })
-
-interface AnimatedVehicle {
-  marker: maplibregl.Marker
-  segment: number
-  t: number // 0..1 position along segment
-  direction: 1 | -1
-  speedJitter: number
-}
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 interface OperationalMapProps {
   pipelineData: PipelineResponse | null
@@ -48,12 +22,126 @@ interface OperationalMapProps {
   visibleLayers: Set<MapLayerId>
 }
 
+interface AnimatedVehicle {
+  marker: maplibregl.Marker
+  edge: number
+  t: number
+  direction: 1 | -1
+  speedJitter: number
+}
+
 const congestionColor = (score: number | undefined) => {
-  if (score === undefined) return '#666666'
+  if (score === undefined) return '#00ff88'
   if (score > 0.6) return '#ff4444'
   if (score > 0.3) return '#ffaa00'
   return '#00ff88'
 }
+
+const rad = (deg: number) => (deg * Math.PI) / 180
+
+const bearing = (a: [number, number], b: [number, number]) => {
+  const [lon1, lat1] = a
+  const [lon2, lat2] = b
+  const dLon = rad(lon2 - lon1)
+  const x = Math.sin(dLon) * Math.cos(rad(lat2))
+  const y =
+    Math.cos(rad(lat1)) * Math.sin(rad(lat2)) -
+    Math.sin(rad(lat1)) * Math.cos(rad(lat2)) * Math.cos(dLon)
+  return ((Math.atan2(x, y) * 180) / Math.PI + 360) % 360
+}
+
+const approxDistance = (a: [number, number], b: [number, number]) => {
+  const dx = (b[0] - a[0]) * 111320 * Math.cos(rad(a[1]))
+  const dy = (b[1] - a[1]) * 111320
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+const nearestPointOnSegment = (p: [number, number], a: [number, number], b: [number, number]) => {
+  const [px, py] = p
+  const [ax, ay] = a
+  const [bx, by] = b
+  const dx = bx - ax
+  const dy = by - ay
+  const len2 = dx * dx + dy * dy
+  if (len2 === 0) return { point: a, t: 0 }
+  let t = ((px - ax) * dx + (py - ay) * dy) / len2
+  t = Math.max(0, Math.min(1, t))
+  return { point: [ax + t * dx, ay + t * dy] as [number, number], t }
+}
+
+const collectRoadEdges = (features: GeoJSON.Feature[]): Array<{ from: [number, number]; to: [number, number] }> => {
+  const edges: Array<{ from: [number, number]; to: [number, number] }> = []
+  for (const f of features) {
+    const geom = f.geometry
+    if (!geom) continue
+    if (geom.type === 'LineString') {
+      const coords = geom.coordinates as [number, number][]
+      for (let i = 0; i < coords.length - 1; i++) {
+        edges.push({ from: coords[i], to: coords[i + 1] })
+      }
+    } else if (geom.type === 'MultiLineString') {
+      const lines = geom.coordinates as [number, number][][]
+      for (const line of lines) {
+        for (let i = 0; i < line.length - 1; i++) {
+          edges.push({ from: line[i], to: line[i + 1] })
+        }
+      }
+    }
+  }
+  return edges
+}
+
+const snapToRoad = (
+  features: GeoJSON.Feature[],
+  target: [number, number]
+): { point: [number, number]; heading: number } | null => {
+  let best: { point: [number, number]; heading: number; dist: number } | null = null
+  for (const f of features) {
+    const geom = f.geometry
+    if (!geom) continue
+    const rings: [number, number][][] =
+      geom.type === 'LineString'
+        ? [geom.coordinates as [number, number][]]
+        : geom.type === 'MultiLineString'
+        ? (geom.coordinates as [number, number][][])
+        : []
+    for (const coords of rings) {
+      for (let i = 0; i < coords.length - 1; i++) {
+        const a = coords[i]
+        const b = coords[i + 1]
+        const { point } = nearestPointOnSegment(target, a, b)
+        const dist = approxDistance(point, target)
+        if (!best || dist < best.dist) {
+          const heading = bearing(a, b)
+          best = { point, dist, heading }
+        }
+      }
+    }
+  }
+  return best
+}
+
+const trafficRoadFilter = [
+  'all',
+  ['!has', 'brunnel'],
+  [
+    'match',
+    ['get', 'class'],
+    ['primary', 'secondary', 'tertiary', 'minor', 'service', 'residential', 'living_street'],
+    true,
+    false,
+  ],
+]
+
+const roadWidth = (widthAt13: number, widthAt17: number) => [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  13,
+  widthAt13,
+  17,
+  widthAt17,
+]
 
 const OperationalMap: React.FC<OperationalMapProps> = ({
   pipelineData,
@@ -71,11 +159,17 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
   const rafRef = useRef<number | null>(null)
   const speedFactorRef = useRef(1)
   const congestionRef = useRef(0)
+  const roadEdgesRef = useRef<Array<{ from: [number, number]; to: [number, number] }>>([])
+  const visibleLayersRef = useRef(visibleLayers)
 
-  // Initialize map once
+  useEffect(() => {
+    visibleLayersRef.current = visibleLayers
+  }, [visibleLayers])
+
+  const isVisible = (id: MapLayerId) => visibleLayersRef.current.has(id)
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
-
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: DARK_STYLE,
@@ -87,30 +181,63 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
     mapRef.current = map
 
     map.on('load', () => {
-      map.addSource('road-network', { type: 'geojson', data: ROAD_NETWORK })
-      // Corridor casing + line — rendered like an operational route overlay
+      // Traffic highlight layers use the same vector tile source as the basemap.
+      // This guarantees every highlighted segment follows an actual road centerline.
       map.addLayer({
-        id: 'road-network-casing',
+        id: 'traffic-road-glow',
         type: 'line',
-        source: 'road-network',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-color': '#003a5c',
-          'line-width': 7,
-          'line-opacity': 0.5,
+        source: 'carto',
+        'source-layer': 'transportation',
+        filter: trafficRoadFilter,
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+          visibility: isVisible('traffic') ? 'visible' : 'none',
         },
-      })
+        paint: {
+          'line-color': 'rgba(0, 170, 255, 0.45)',
+          'line-width': roadWidth(10, 24),
+          'line-blur': 10,
+          'line-opacity': 0.25,
+        },
+      } as any)
+
       map.addLayer({
-        id: 'road-network-line',
+        id: 'traffic-road-soft',
         type: 'line',
-        source: 'road-network',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-color': '#00aaff',
-          'line-width': 2.5,
-          'line-opacity': 0.55,
+        source: 'carto',
+        'source-layer': 'transportation',
+        filter: trafficRoadFilter,
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+          visibility: isVisible('traffic') ? 'visible' : 'none',
         },
-      })
+        paint: {
+          'line-color': 'rgba(0, 170, 255, 0.6)',
+          'line-width': roadWidth(4, 8),
+          'line-blur': 3,
+          'line-opacity': 0.4,
+        },
+      } as any)
+
+      map.addLayer({
+        id: 'traffic-road-core',
+        type: 'line',
+        source: 'carto',
+        'source-layer': 'transportation',
+        filter: trafficRoadFilter,
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+          visibility: isVisible('traffic') ? 'visible' : 'none',
+        },
+        paint: {
+          'line-color': '#00ff88',
+          'line-width': roadWidth(1.5, 3.5),
+          'line-opacity': 0.85,
+        },
+      } as any)
 
       // Intersection markers
       MOCK_INTERSECTIONS.forEach((intersection) => {
@@ -118,37 +245,31 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
         el.className = 'op-map-intersection-marker'
         el.dataset.intersectionId = intersection.id
         el.style.cursor = 'pointer'
-        el.style.transition = 'width 150ms ease, height 150ms ease, box-shadow 150ms ease, border 150ms ease'
+        el.style.transition = 'width 150ms ease, height 150ms ease, box-shadow 150ms ease, border 150ms ease, background 600ms ease'
         el.onclick = () => onSelectIntersection(intersection.id)
-
         const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat([intersection.lon, intersection.lat])
           .addTo(map)
         markersRef.current[intersection.id] = marker
       })
 
-      // Camera markers
-      MOCK_CAMERAS.forEach((camera) => {
-        const el = document.createElement('div')
-        el.className = 'op-map-camera-marker'
-        el.style.background = camera.status === 'online' ? '#00aaff' : '#555555'
-        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-          .setLngLat([camera.lon, camera.lat])
-          .addTo(map)
-        cameraMarkersRef.current.push(marker)
-      })
-
       // Incident markers
       MOCK_INCIDENTS.forEach((incident) => {
         const el = document.createElement('div')
         el.className = 'op-map-incident-marker'
+        el.style.width = '10px'
+        el.style.height = '10px'
+        el.style.borderRadius = '50%'
+        el.style.background = incident.severity === 'high' ? '#ff4444' : '#ffaa00'
+        el.style.border = '2px solid #0a0a0a'
+        el.style.boxShadow = '0 0 6px 1px rgba(255, 68, 68, 0.6)'
         const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat([incident.lon, incident.lat])
           .addTo(map)
         incidentMarkersRef.current.push(marker)
       })
 
-      // Queue ring — expands/contracts with live queue length at the primary node
+      // Queue ring at the primary intersection
       const primary = MOCK_INTERSECTIONS.find((i) => i.isPrimary)
       if (primary) {
         const ringEl = document.createElement('div')
@@ -165,58 +286,78 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
           .addTo(map)
       }
 
-      // Animated vehicles distributed along the road network
-      if (!prefersReducedMotion()) {
-        ROAD_SEGMENTS.forEach((_, segIdx) => {
-          const perSegment = segIdx % 2 === 0 ? 2 : 1
-          for (let v = 0; v < perSegment; v++) {
-            const el = document.createElement('div')
-            el.className = 'op-map-vehicle-dot'
-            el.style.width = '5px'
-            el.style.height = '5px'
-            el.style.borderRadius = '50%'
-            el.style.background = '#7fd4ff'
-            el.style.boxShadow = '0 0 4px 1px rgba(127, 212, 255, 0.6)'
-            el.style.pointerEvents = 'none'
-            el.style.transition = 'background 600ms ease, box-shadow 600ms ease'
-            const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-              .setLngLat(ROAD_SEGMENTS[segIdx].from)
-              .addTo(map)
-            vehiclesRef.current.push({
-              marker,
-              segment: segIdx,
-              t: (v + 0.5) / (perSegment + 1) + Math.random() * 0.2,
-              direction: v % 2 === 0 ? 1 : -1,
-              speedJitter: 0.7 + Math.random() * 0.6,
-            })
-          }
-        })
-        startVehicleLoop()
-      }
-
       refreshIntersectionStyles()
-      refreshLayerVisibility()
-      refreshQueueRing()
+
+      // Wait for all visible tiles before extracting road geometry for animation.
+      map.once('idle', () => {
+        const roadFeatures = map.queryRenderedFeatures(undefined, {
+          layers: ['traffic-road-core'],
+        })
+        const combined: GeoJSON.Feature[] = roadFeatures.map((f) => ({
+          type: 'Feature',
+          geometry: f.geometry,
+          properties: f.properties || {},
+        }) as unknown as GeoJSON.Feature)
+        roadEdgesRef.current = collectRoadEdges(combined)
+
+        // Snap cameras to nearest road and align their heading.
+        MOCK_CAMERAS.forEach((camera) => {
+          const snap = snapToRoad(combined, [camera.lon, camera.lat])
+          if (!snap) return
+          const el = document.createElement('div')
+          el.style.width = '12px'
+          el.style.height = '12px'
+          el.style.borderRadius = '50%'
+          el.style.background = camera.status === 'online' ? '#00aaff' : '#555555'
+          el.style.border = '2px solid #0a0a0a'
+          el.style.boxShadow = '0 0 6px 1px rgba(0, 170, 255, 0.6)'
+          el.style.pointerEvents = 'none'
+          const arrow = document.createElement('div')
+          arrow.style.position = 'absolute'
+          arrow.style.top = '-8px'
+          arrow.style.left = '50%'
+          arrow.style.width = '0'
+          arrow.style.height = '0'
+          arrow.style.borderLeft = '3px solid transparent'
+          arrow.style.borderRight = '3px solid transparent'
+          arrow.style.borderBottom = `5px solid ${camera.status === 'online' ? '#00aaff' : '#555555'}`
+          arrow.style.transform = `translateX(-50%) rotate(${snap.heading}deg)`
+          el.appendChild(arrow)
+          const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+            .setLngLat(snap.point)
+            .addTo(map)
+          marker.getElement().style.display = isVisible('cameras') ? 'block' : 'none'
+          cameraMarkersRef.current.push(marker)
+        })
+
+        createVehicles()
+        if (!prefersReducedMotion()) startVehicleLoop()
+      })
     })
 
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
-      vehiclesRef.current = []
+      roadEdgesRef.current = []
       map.remove()
       mapRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // rAF loop moving vehicle dots along their road segments. Speed scales
-  // with live average speed; congestion tints the dots toward amber/red.
   const startVehicleLoop = () => {
     let last = performance.now()
     const step = (now: number) => {
       const dt = Math.min((now - last) / 1000, 0.1)
       last = now
-      const base = 0.05 * speedFactorRef.current // segment fraction per second
+      const edges = roadEdgesRef.current
+      if (edges.length === 0) {
+        rafRef.current = requestAnimationFrame(step)
+        return
+      }
+      const base = 0.12 * speedFactorRef.current
       vehiclesRef.current.forEach((v) => {
+        const seg = edges[v.edge]
+        if (!seg) return
         v.t += base * v.speedJitter * dt * v.direction
         if (v.t > 1) {
           v.t = 1
@@ -225,7 +366,6 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
           v.t = 0
           v.direction = 1
         }
-        const seg = ROAD_SEGMENTS[v.segment]
         const lon = seg.from[0] + (seg.to[0] - seg.from[0]) * v.t
         const lat = seg.from[1] + (seg.to[1] - seg.from[1]) * v.t
         v.marker.setLngLat([lon, lat])
@@ -235,10 +375,44 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
     rafRef.current = requestAnimationFrame(step)
   }
 
+  const createVehicles = () => {
+    const map = mapRef.current
+    if (!map) return
+    const edges = roadEdgesRef.current
+    const count = Math.min(80, edges.length)
+    for (let i = 0; i < count; i++) {
+      const edge = edges[i]
+      const el = document.createElement('div')
+      el.style.width = '5px'
+      el.style.height = '5px'
+      el.style.borderRadius = '50%'
+      el.style.background = '#7fd4ff'
+      el.style.boxShadow = '0 0 4px 1px rgba(127, 212, 255, 0.6)'
+      el.style.pointerEvents = 'none'
+      el.style.transition = 'background 600ms ease, box-shadow 600ms ease'
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat(edge.from)
+        .addTo(map)
+      marker.getElement().style.display = isVisible('traffic') ? 'block' : 'none'
+      vehiclesRef.current.push({
+        marker,
+        edge: i,
+        t: ((i % 5) + 0.5) / 5,
+        direction: i % 2 === 0 ? 1 : -1,
+        speedJitter: 0.7 + Math.random() * 0.6,
+      })
+    }
+  }
+
   const refreshVehicleTint = () => {
     const congestion = congestionRef.current
     const color = congestion > 0.6 ? '#ffb3a7' : congestion > 0.3 ? '#ffe0a3' : '#7fd4ff'
-    const glow = congestion > 0.6 ? 'rgba(255, 100, 80, 0.6)' : congestion > 0.3 ? 'rgba(255, 190, 80, 0.55)' : 'rgba(127, 212, 255, 0.6)'
+    const glow =
+      congestion > 0.6
+        ? 'rgba(255, 100, 80, 0.6)'
+        : congestion > 0.3
+        ? 'rgba(255, 190, 80, 0.55)'
+        : 'rgba(127, 212, 255, 0.6)'
     vehiclesRef.current.forEach((v) => {
       const el = v.marker.getElement()
       el.style.background = color
@@ -246,12 +420,44 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
     })
   }
 
+  const refreshRoadColor = () => {
+    const map = mapRef.current
+    if (!map) return
+    const color = congestionColor(congestionRef.current)
+    const layers = ['traffic-road-glow', 'traffic-road-soft', 'traffic-road-core'] as const
+    for (const id of layers) {
+      if (!map.getLayer(id)) continue
+      if (id === 'traffic-road-glow') {
+        map.setPaintProperty(
+          id,
+          'line-color',
+          color === '#ff4444'
+            ? 'rgba(255, 68, 68, 0.45)'
+            : color === '#ffaa00'
+            ? 'rgba(255, 170, 0, 0.45)'
+            : 'rgba(0, 170, 255, 0.45)'
+        )
+      } else if (id === 'traffic-road-soft') {
+        map.setPaintProperty(
+          id,
+          'line-color',
+          color === '#ff4444'
+            ? 'rgba(255, 68, 68, 0.6)'
+            : color === '#ffaa00'
+            ? 'rgba(255, 170, 0, 0.6)'
+            : 'rgba(0, 170, 255, 0.6)'
+        )
+      } else {
+        map.setPaintProperty(id, 'line-color', color)
+      }
+    }
+  }
+
   const refreshQueueRing = () => {
     const ring = queueRingRef.current
     if (!ring) return
     const el = ring.getElement()
     const queue = pipelineData?.queue_length_meters ?? 0
-    // Map queue length (m) to a ring diameter in px — grows/shrinks smoothly via CSS transition.
     const diameter = Math.min(Math.max(queue * 0.9, 0), 120)
     el.style.width = `${diameter}px`
     el.style.height = `${diameter}px`
@@ -267,9 +473,8 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
       if (!marker) return
       const el = marker.getElement()
       const isSelected = intersection.id === selectedIntersectionId
-      const score = intersection.id === pipelineData?.intersection_id
-        ? pipelineData?.congestion_score
-        : undefined
+      const score =
+        intersection.id === pipelineData?.intersection_id ? pipelineData?.congestion_score : undefined
       const color = intersection.isPrimary ? congestionColor(score) : '#3a86ff'
       el.style.width = isSelected ? '18px' : '13px'
       el.style.height = isSelected ? '18px' : '13px'
@@ -278,31 +483,29 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
         'width 150ms ease, height 150ms ease, box-shadow 600ms ease, border 150ms ease, background 600ms ease'
       el.style.background = color
       el.style.border = isSelected ? '2px solid #ffffff' : '2px solid #0a0a0a'
-      el.style.boxShadow = isSelected
-        ? `0 0 10px 3px ${color}`
-        : `0 0 6px 1px ${color}80`
+      el.style.boxShadow = isSelected ? `0 0 10px 3px ${color}` : `0 0 6px 1px ${color}80`
     })
   }
 
   const refreshLayerVisibility = () => {
+    const map = mapRef.current
+    if (!map) return
+    const showTraffic = isVisible('traffic')
+    const showCameras = isVisible('cameras')
+    const showIncidents = isVisible('incidents')
+    const layerIds = ['traffic-road-glow', 'traffic-road-soft', 'traffic-road-core']
+    layerIds.forEach((id) => {
+      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', showTraffic ? 'visible' : 'none')
+    })
     cameraMarkersRef.current.forEach((m) => {
-      m.getElement().style.display = visibleLayers.has('cameras') ? 'block' : 'none'
+      m.getElement().style.display = showCameras ? 'block' : 'none'
     })
     vehiclesRef.current.forEach((v) => {
-      v.marker.getElement().style.display = visibleLayers.has('traffic') ? 'block' : 'none'
+      v.marker.getElement().style.display = showTraffic ? 'block' : 'none'
     })
-    if (queueRingRef.current) {
-      queueRingRef.current.getElement().style.display = visibleLayers.has('traffic') ? 'block' : 'none'
-    }
     incidentMarkersRef.current.forEach((m) => {
-      m.getElement().style.display = visibleLayers.has('incidents') ? 'block' : 'none'
+      m.getElement().style.display = showIncidents ? 'block' : 'none'
     })
-    const map = mapRef.current
-    if (map) {
-      const vis = visibleLayers.has('traffic') ? 'visible' : 'none'
-      if (map.getLayer('road-network-line')) map.setLayoutProperty('road-network-line', 'visibility', vis)
-      if (map.getLayer('road-network-casing')) map.setLayoutProperty('road-network-casing', 'visibility', vis)
-    }
   }
 
   useEffect(() => {
@@ -310,12 +513,12 @@ const OperationalMap: React.FC<OperationalMapProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIntersectionId, pipelineData?.congestion_score])
 
-  // Keep animation parameters in sync with live pipeline metrics
   useEffect(() => {
     const speed = pipelineData?.average_speed_kmh ?? 30
     speedFactorRef.current = Math.min(Math.max(speed / 30, 0.25), 2)
     congestionRef.current = pipelineData?.congestion_score ?? 0
     refreshVehicleTint()
+    refreshRoadColor()
     refreshQueueRing()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pipelineData?.average_speed_kmh, pipelineData?.congestion_score, pipelineData?.queue_length_meters])
