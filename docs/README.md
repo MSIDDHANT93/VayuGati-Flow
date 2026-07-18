@@ -6,14 +6,27 @@ This folder contains all project documentation for VayuGati Flow, the AI-powered
 
 Start here if you are new to the project, then navigate to the specific document that matches your concern.
 
+## Documentation Governance
+
+To keep documentation consistent and reviewable, the following governance documents apply to all contributions in `docs/`:
+
+- [`STYLE_GUIDE.md`](STYLE_GUIDE.md) — writing, Markdown, Mermaid, requirement ID, and linking conventions.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to create, update, review, and cross-reference documentation.
+- [`adr/README.md`](adr/README.md) — how Architecture Decision Records are authored and managed.
+
 ## Folder Structure
 
 `
 docs/
 ├── README.md                    # This file — navigation guide
+├── STYLE_GUIDE.md             # Documentation style and conventions
+├── CONTRIBUTING.md            # Documentation contribution workflow
 ├── PRD.md                       # Lightweight product brief
 ├── SYSTEM_OVERVIEW.md           # Architecture and data-flow overview
 ├── agents.md                    # AI agent roles and responsibilities
+├── adr/                         # Architecture Decision Records
+│   ├── README.md
+│   └── ADR-NNN-*.md (future)
 └── prd/                         # Formal PRD sections
     ├── 00-document-control.md
     ├── 01-executive-overview.md
