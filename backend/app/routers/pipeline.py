@@ -3,8 +3,9 @@ from typing import Annotated, Optional
 from pydantic import BaseModel, Field
 
 from app.schemas.common import APIResponse
-from app.services.pipeline_service import PipelineService, PipelineResult
+from app.services.pipeline_service import PipelineService
 from app.services.demo_scenarios import get_scenario, list_scenarios
+from app.utils.responses import execute_service
 
 
 router = APIRouter(prefix="/pipeline", tags=["pipeline"])
@@ -58,6 +59,53 @@ class PipelineResponse(BaseModel):
     pipeline_duration_ms: float = Field(..., description="Total pipeline duration")
 
 
+def _build_pipeline_response(
+    request: PipelineRequest,
+    service: PipelineService,
+) -> PipelineResponse:
+    """Load the requested demo scenario and run the analysis pipeline."""
+    scenario = get_scenario(request.scenario)
+    if scenario is None:
+        raise HTTPException(status_code=400, detail=f"Unknown scenario: {request.scenario}")
+
+    vehicle_detections = scenario.get_vehicle_detections(
+        request.camera_id,
+        request.intersection_id,
+        request.frame_id
+    )
+
+    result = service.analyze_from_detections(
+        vehicle_detections=vehicle_detections,
+        intersection_id=request.intersection_id,
+        camera_id=request.camera_id,
+        frame_id=request.frame_id,
+        lane_count=request.lane_count,
+        lane_length_meters=request.lane_length_meters,
+        free_flow_speed_kmh=request.free_flow_speed_kmh,
+        capacity_vehicles_per_hour=request.capacity_vehicles_per_hour
+    )
+
+    return PipelineResponse(
+        scenario=request.scenario,
+        intersection_id=request.intersection_id,
+        total_vehicles=result.traffic_result.total_vehicles_analyzed,
+        vision_detections=len(vehicle_detections),
+        vision_inference_time_ms=0.0,  # Skipped in demo mode
+        queue_length_meters=result.traffic_result.queue_length_meters,
+        vehicle_density_vehicles_per_km=result.traffic_result.vehicle_density_vehicles_per_km,
+        average_speed_kmh=result.traffic_result.average_speed_kmh,
+        occupancy_rate=result.traffic_result.occupancy_rate,
+        congestion_score=result.traffic_result.congestion_score,
+        level_of_service=result.traffic_result.level_of_service.value,
+        risk_score=result.traffic_result.risk_score,
+        congestion_explanation=result.reasoning_result.congestion_explanation,
+        probable_root_causes=result.reasoning_result.probable_root_causes,
+        traffic_recommendations=result.reasoning_result.traffic_recommendations,
+        ai_confidence=result.reasoning_result.confidence_score,
+        pipeline_duration_ms=result.pipeline_duration_ms
+    )
+
+
 @router.post("/demo", response_model=APIResponse[PipelineResponse])
 async def run_demo_pipeline(
     request: PipelineRequest,
@@ -78,60 +126,12 @@ async def run_demo_pipeline(
     - illegal_parking: Vehicles illegally parked blocking traffic
     - emergency_vehicle: Emergency vehicle requiring right-of-way
     """
-    try:
-        # Get demo scenario
-        scenario = get_scenario(request.scenario)
-        if scenario is None:
-            raise HTTPException(status_code=400, detail=f"Unknown scenario: {request.scenario}")
-        
-        # Get vehicle detections from scenario
-        vehicle_detections = scenario.get_vehicle_detections(
-            request.camera_id,
-            request.intersection_id,
-            request.frame_id
-        )
-        
-        # Run pipeline (skip vision stage, use scenario detections)
-        result = service.analyze_from_detections(
-            vehicle_detections=vehicle_detections,
-            intersection_id=request.intersection_id,
-            camera_id=request.camera_id,
-            frame_id=request.frame_id,
-            lane_count=request.lane_count,
-            lane_length_meters=request.lane_length_meters,
-            free_flow_speed_kmh=request.free_flow_speed_kmh,
-            capacity_vehicles_per_hour=request.capacity_vehicles_per_hour
-        )
-        
-        # Build response
-        response = PipelineResponse(
-            scenario=request.scenario,
-            intersection_id=request.intersection_id,
-            total_vehicles=result.traffic_result.total_vehicles_analyzed,
-            vision_detections=len(vehicle_detections),
-            vision_inference_time_ms=0.0,  # Skipped in demo mode
-            queue_length_meters=result.traffic_result.queue_length_meters,
-            vehicle_density_vehicles_per_km=result.traffic_result.vehicle_density_vehicles_per_km,
-            average_speed_kmh=result.traffic_result.average_speed_kmh,
-            occupancy_rate=result.traffic_result.occupancy_rate,
-            congestion_score=result.traffic_result.congestion_score,
-            level_of_service=result.traffic_result.level_of_service.value,
-            risk_score=result.traffic_result.risk_score,
-            congestion_explanation=result.reasoning_result.congestion_explanation,
-            probable_root_causes=result.reasoning_result.probable_root_causes,
-            traffic_recommendations=result.reasoning_result.traffic_recommendations,
-            ai_confidence=result.reasoning_result.confidence_score,
-            pipeline_duration_ms=result.pipeline_duration_ms
-        )
-        
-        return APIResponse[PipelineResponse](
-            success=True,
-            data=response,
-            errors=None
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {str(e)}")
+    return execute_service(
+        lambda: _build_pipeline_response(request, service),
+        "Pipeline execution failed",
+        "Pipeline execution failed for scenario '%s'",
+        request.scenario,
+    )
 
 
 @router.get("/scenarios")

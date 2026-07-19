@@ -25,29 +25,31 @@ except ImportError:
 
 from app.schemas.vision import VisionAnalysisRequest, VisionAnalysisResponse
 from app.models.vehicle_detection import VehicleDetection, VehicleType, DetectionConfidence
+from app.config import get_settings
 from app.utils.logger import logger
 
 
 class ComputerVisionService:
     """Service for computer vision analysis using YOLO."""
     
-    def __init__(self, model_path: str = "yolov8n.pt"):
+    def __init__(self, model_path: str | None = None):
         """
         Initialize computer vision service with YOLO model.
         
         Args:
-            model_path: Path to YOLO model file (default: yolov8n.pt)
+            model_path: Path to YOLO model file. If not provided, the value
+                from the YOLO_MODEL_PATH environment variable / setting is used.
         """
-        self.model_path = model_path
+        self.model_path = model_path or get_settings().yolo_model_path
         self.model = None
         
         if YOLO_AVAILABLE:
             try:
-                self.model = YOLO(model_path)
+                self.model = YOLO(self.model_path)
             except Exception:
                 logger.warning(
                     "Failed to load YOLO model from '%s'; falling back to mock detections.",
-                    model_path,
+                    self.model_path,
                     exc_info=True,
                 )
     
