@@ -28,7 +28,7 @@ function App() {
       appendLog({
         id: `pipeline-${Date.now()}`,
         timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
-        message: `PIPELINE COMPLETE — ${pipelineData.intersection_id} (${pipelineData.scenario.replace('_', ' ')})`,
+        message: `PIPELINE COMPLETE — ${pipelineData.intersection_id} (${pipelineData.scenario.replaceAll('_', ' ')})`,
         level: pipelineData.risk_score > 0.5 ? 'warning' : 'success',
       })
     }

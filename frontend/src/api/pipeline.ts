@@ -1,4 +1,5 @@
 import apiClient from './client'
+import { APIResponse } from '../types'
 
 export interface PipelineRequest {
   scenario: string
@@ -29,13 +30,6 @@ export interface PipelineResponse {
   traffic_recommendations: string[]
   ai_confidence: number
   pipeline_duration_ms: number
-}
-
-export interface APIResponse<T> {
-  success: boolean
-  timestamp: string
-  data: T
-  errors: string[] | null
 }
 
 export const pipelineApi = {
