@@ -4,3 +4,13 @@ __pycache__/
 *.pyc
 .env
 .vscode/
+.pytest_cache/
+
+# Model weights and large binaries
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.h5
+*.ckpt
+*.safetensors

@@ -1,0 +1,44 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.venv/
+.venv*/
+
+# Node.js
+node_modules/
+dist/
+*.local
+
+# Model weights and large binaries
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.h5
+*.ckpt
+*.safetensors
+
+# Frontend test artifacts
+test-results/
+playwright/.cache/
