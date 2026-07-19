@@ -127,6 +127,14 @@ npm run preview
 npm run lint
 ```
 
+## Documentation
+
+- [Main README](../README.md)
+- [Architecture](../docs/architecture.md)
+- [Developer Guide](../docs/developer-guide.md)
+- [Deployment Guide](../docs/deployment.md)
+- [System Overview](../docs/SYSTEM_OVERVIEW.md)
+
 ## License
 
-MIT
+[MIT](../LICENSE)

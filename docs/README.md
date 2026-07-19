@@ -23,7 +23,12 @@ docs/
 ├── CONTRIBUTING.md            # Documentation contribution workflow
 ├── PRD.md                       # Lightweight product brief
 ├── SYSTEM_OVERVIEW.md           # Architecture and data-flow overview
+├── architecture.md              # Deep-dive architecture guide
+├── developer-guide.md           # Developer onboarding and workflows
+├── deployment.md                # Deployment runbook
 ├── agents.md                    # AI agent roles and responsibilities
+├── images/                      # Screenshots, diagrams, and demo GIFs
+│   └── README.md
 ├── adr/                         # Architecture Decision Records
 │   ├── README.md
 │   └── ADR-NNN-*.md (future)
@@ -64,10 +69,20 @@ docs/
     └── README.md
 `
 
+## Core Documentation
+
+- [System Overview](SYSTEM_OVERVIEW.md) — Concise architecture summary and data flow.
+- [Architecture](architecture.md) — Deep-dive architecture, sequence diagrams, deployment, and scaling strategy.
+- [Developer Guide](developer-guide.md) — Onboarding, coding standards, branch strategy, and contribution workflow.
+- [Deployment Guide](deployment.md) — Backend/frontend deployment, environment variables, and production checklist.
+- [Contributing](CONTRIBUTING.md) — Documentation contribution conventions.
+- [Style Guide](STYLE_GUIDE.md) — Markdown, Mermaid, and writing standards.
+- [Visual Assets](images/) — Screenshots, diagrams, and demo GIFs.
+
 ## Navigation Guide
 
 - **New to the project?** Start with [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) for architecture, then [prd/01-executive-overview.md](prd/01-executive-overview.md) for business context.
-- **Developer?** See [prd/06-system-architecture.md](prd/06-system-architecture.md), [prd/08-data-model.md](prd/08-data-model.md), and [prd/09-api-specification.md](prd/09-api-specification.md).
+- **Developer?** See [developer-guide.md](developer-guide.md), [prd/06-system-architecture.md](prd/06-system-architecture.md), [prd/08-data-model.md](prd/08-data-model.md), and [prd/09-api-specification.md](prd/09-api-specification.md).
 - **Designer / PM?** See [prd/10-user-experience.md](prd/10-user-experience.md), [prd/04-functional-requirements.md](prd/04-functional-requirements.md), and [prd/01-executive-overview.md](prd/01-executive-overview.md).
-- **DevOps / Security?** See [prd/11-security.md](prd/11-security.md), [prd/12-infrastructure.md](prd/12-infrastructure.md), and [prd/13-deployment.md](prd/13-deployment.md).
+- **DevOps / Security?** See [deployment.md](deployment.md), [prd/11-security.md](prd/11-security.md), [prd/12-infrastructure.md](prd/12-infrastructure.md), and [prd/13-deployment.md](prd/13-deployment.md).
 - **Business / Commercial?** See [prd/14-commercial-strategy.md](prd/14-commercial-strategy.md), [prd/15-roadmap.md](prd/15-roadmap.md), and [prd/02-problem-domain.md](prd/02-problem-domain.md).
