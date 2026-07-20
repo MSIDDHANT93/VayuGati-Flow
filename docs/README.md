@@ -13,6 +13,7 @@ To keep documentation consistent and reviewable, the following governance docume
 - [`STYLE_GUIDE.md`](STYLE_GUIDE.md) — writing, Markdown, Mermaid, requirement ID, and linking conventions.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to create, update, review, and cross-reference documentation.
 - [`adr/README.md`](adr/README.md) — how Architecture Decision Records are authored and managed.
+- [`MILESTONE_VERSIONING.md`](MILESTONE_VERSIONING.md) — mandatory annotated Git-tag process for significant milestones.
 
 ## Folder Structure
 
@@ -21,6 +22,7 @@ docs/
 ├── README.md                    # This file — navigation guide
 ├── STYLE_GUIDE.md             # Documentation style and conventions
 ├── CONTRIBUTING.md            # Documentation contribution workflow
+├── MILESTONE_VERSIONING.md      # Annotated Git-tag governance
 ├── PRD.md                       # Lightweight product brief
 ├── SYSTEM_OVERVIEW.md           # Architecture and data-flow overview
 ├── architecture.md              # Deep-dive architecture guide
@@ -88,6 +90,7 @@ docs/
 - [Visual Assets](images/) — Screenshots, diagrams, and demo GIFs.
 - [Reviews](reviews/README.md) — Baseline engineering review and end-to-end execution trace.
 - [Product Strategy](strategy/README.md) — Pune-first MVP strategy and Digital Twin Library plan.
+- [Milestone Versioning](MILESTONE_VERSIONING.md) — Mandatory annotated Git-tag and release-note process.
 
 ## Navigation Guide
 

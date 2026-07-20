@@ -249,6 +249,7 @@ Before opening a pull request, verify:
    - Reviewer focus areas
 7. **Address review feedback** and ensure CI checks pass.
 8. **Merge** once approved by a maintainer.
+9. **Version significant milestones.** Follow [Milestone Versioning](MILESTONE_VERSIONING.md): verify tests and documentation, commit, create an annotated semantic-version tag, push the commit, and push the tag. A milestone is incomplete until its tag is pushed.
 
 ### Documentation Contributions
 
