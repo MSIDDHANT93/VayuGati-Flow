@@ -89,4 +89,4 @@ If a tag has not been created or pushed, the report must explicitly state the re
 - **Breaking changes:** None. This is a documentation and product-strategy change; no APIs or application code changed.
 - **Next planned milestone:** `v0.3.0-digital-twin` after the first three Pune premium digital twins, field-validation manifests, scenario library, and simulation-ready asset contracts are implemented.
 - **Tag:** `v0.2.0-product-strategy`
-- **Status:** Pending creation and push.
+- **Status:** Created and pushed to `origin` on 2026-07-20.
