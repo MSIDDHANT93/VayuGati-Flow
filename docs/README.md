@@ -57,6 +57,10 @@ docs/
 │   ├── README.md
 │   ├── engineering-review-2026.md
 │   └── execution-trace-2026.md
+├── strategy/                    # Product strategy and Digital Twin Library
+│   ├── README.md
+│   ├── mvp-2.1-pune-cto-design.md
+│   └── pune-digital-twin-library.md
 └── via/                         # VayuGati Intelligence Architecture
     ├── 00-document-control.md
     ├── 01-vision.md
@@ -83,6 +87,7 @@ docs/
 - [Style Guide](STYLE_GUIDE.md) — Markdown, Mermaid, and writing standards.
 - [Visual Assets](images/) — Screenshots, diagrams, and demo GIFs.
 - [Reviews](reviews/README.md) — Baseline engineering review and end-to-end execution trace.
+- [Product Strategy](strategy/README.md) — Pune-first MVP strategy and Digital Twin Library plan.
 
 ## Navigation Guide
 
