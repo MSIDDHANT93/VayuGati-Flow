@@ -53,6 +53,10 @@ docs/
 │   └── appendix.md
 ├── testing/                     # Testing documentation and runbooks
 │   └── playwright.md
+├── reviews/                     # Baseline engineering and execution reviews
+│   ├── README.md
+│   ├── engineering-review-2026.md
+│   └── execution-trace-2026.md
 └── via/                         # VayuGati Intelligence Architecture
     ├── 00-document-control.md
     ├── 01-vision.md
@@ -78,6 +82,7 @@ docs/
 - [Contributing](CONTRIBUTING.md) — Documentation contribution conventions.
 - [Style Guide](STYLE_GUIDE.md) — Markdown, Mermaid, and writing standards.
 - [Visual Assets](images/) — Screenshots, diagrams, and demo GIFs.
+- [Reviews](reviews/README.md) — Baseline engineering review and end-to-end execution trace.
 
 ## Navigation Guide
 
