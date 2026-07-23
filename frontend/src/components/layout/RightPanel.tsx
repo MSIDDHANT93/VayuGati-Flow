@@ -3,16 +3,24 @@ import { AlertCircle } from 'lucide-react'
 import SituationSummary from '../mission/SituationSummary'
 import DecisionSupport from '../mission/DecisionSupport'
 import { PipelineResponse } from '../../api/pipeline'
-import { MissionLogEntry } from '../panels/MissionLog'
 
 interface RightPanelProps {
   pipelineData: PipelineResponse | null
   loading: boolean
   error: string | null
-  onMissionLog?: (entry: MissionLogEntry) => void
+  onSimulate: (title: string) => void
+  onApprove: (title: string) => void
+  onViewEvidence: (title: string) => void
 }
 
-const RightPanel: React.FC<RightPanelProps> = ({ pipelineData, loading, error, onMissionLog }) => {
+const RightPanel: React.FC<RightPanelProps> = ({
+  pipelineData,
+  loading,
+  error,
+  onSimulate,
+  onApprove,
+  onViewEvidence,
+}) => {
   if (error) {
     return (
       <aside className="bg-mission-panel border-l border-mission-border flex flex-col p-3">
@@ -29,7 +37,13 @@ const RightPanel: React.FC<RightPanelProps> = ({ pipelineData, loading, error, o
       <div className="p-3 space-y-3 overflow-y-auto scrollbar-thin flex-1">
         <SituationSummary pipelineData={pipelineData} loading={loading} />
         <div className="flex-1 min-h-0">
-          <DecisionSupport pipelineData={pipelineData} loading={loading} onLog={onMissionLog} />
+          <DecisionSupport
+            pipelineData={pipelineData}
+            loading={loading}
+            onSimulate={onSimulate}
+            onApprove={onApprove}
+            onViewEvidence={onViewEvidence}
+          />
         </div>
       </div>
     </aside>

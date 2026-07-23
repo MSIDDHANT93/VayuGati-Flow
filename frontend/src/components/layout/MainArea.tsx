@@ -1,8 +1,8 @@
-import React, { Suspense, lazy, useState } from 'react'
+import React, { Suspense, lazy } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { PipelineResponse } from '../../api/pipeline'
 import LayerControls from '../map/LayerControls'
-import { MAP_LAYERS, MapLayerId } from '../../data/gisData'
+import { MapLayerId } from '../../data/gisData'
 
 // Code-split the MapLibre-backed map: it is the single largest dependency in
 // the bundle, so defer loading it until MainArea actually mounts.
@@ -12,23 +12,21 @@ interface MainAreaProps {
   pipelineData: PipelineResponse | null
   loading: boolean
   error?: string | null
+  selectedIntersectionId: string
+  visibleLayers: Set<MapLayerId>
+  onSelectIntersection: (intersectionId: string) => void
+  onToggleLayer: (layerId: MapLayerId) => void
 }
 
-const defaultLayers = new Set<MapLayerId>(
-  MAP_LAYERS.filter((l) => l.defaultOn).map((l) => l.id)
-)
-
-const MainArea: React.FC<MainAreaProps> = ({ pipelineData, loading, error }) => {
-  const [visibleLayers, setVisibleLayers] = useState<Set<MapLayerId>>(defaultLayers)
-
-  const toggleLayer = (id: MapLayerId) => {
-    setVisibleLayers((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+const MainArea: React.FC<MainAreaProps> = ({
+  pipelineData,
+  loading,
+  error,
+  selectedIntersectionId,
+  visibleLayers,
+  onSelectIntersection,
+  onToggleLayer,
+}) => {
 
   return (
     <main className="relative bg-mission-dark overflow-hidden h-full w-full">
@@ -42,15 +40,15 @@ const MainArea: React.FC<MainAreaProps> = ({ pipelineData, loading, error }) => 
         >
           <OperationalMap
             pipelineData={pipelineData}
-            selectedIntersectionId={pipelineData?.intersection_id || 'INT-001'}
-            onSelectIntersection={() => {}}
+            selectedIntersectionId={selectedIntersectionId}
+            onSelectIntersection={onSelectIntersection}
             visibleLayers={visibleLayers}
           />
         </Suspense>
       </div>
 
       <div className="absolute top-3 right-3 z-10">
-        <LayerControls visibleLayers={visibleLayers} onToggle={toggleLayer} />
+        <LayerControls visibleLayers={visibleLayers} onToggle={onToggleLayer} />
       </div>
 
       {pipelineData && pipelineData.risk_score > 0.5 && (
